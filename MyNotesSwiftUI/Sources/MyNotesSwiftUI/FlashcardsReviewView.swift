@@ -184,7 +184,7 @@ struct FlashcardsReviewView: View {
                 } else {
                     HStack(spacing: 10) {
                         Button {
-                            if let current { cardToDelete = current.id }
+                            cardToDelete = current.id
                         } label: {
                             Label("حذف البطاقة", systemImage: "trash")
                                 .font(.caption.weight(.bold))

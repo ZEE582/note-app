@@ -48,7 +48,7 @@ struct NoteEditorView: View {
             }
             .navigationTitle(distractionFree ? "" : "تحرير الملاحظة")
             .navigationBarTitleDisplayMode(distractionFree ? .inline : .large)
-            .toolbar { toolbarContent }
+            .toolbar(content: { toolbarContent })
             .fileImporter(isPresented: $showingImporter, allowedContentTypes: [.pdf]) { result in
                 importPDF(result)
             }

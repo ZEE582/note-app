@@ -16,11 +16,19 @@ struct PDFAttachment: Codable, Hashable {
     /// A bookmark can go stale when the file moves or the sandbox changes.
     /// Resolving reports staleness so callers can re-create the bookmark
     /// instead of silently failing to open the document.
+    ///
+    /// `.withSecurityScope` is macOS-only; iOS documents live inside the app
+    /// container and are reachable without a security scope, so the option is
+    /// applied only where it exists. `.minimalBookmark` is available on both.
     func resolve() -> (url: URL, wasStale: Bool)? {
         var isStale = false
+        var options: URL.BookmarkResolutionOptions = []
+        #if os(macOS)
+        options.insert(.withSecurityScope)
+        #endif
         guard let bookmark,
               let url = try? URL(resolvingBookmarkData: bookmark,
-                                 options: [.withSecurityScope],
+                                 options: options,
                                  relativeTo: nil,
                                  bookmarkDataIsStale: &isStale) else { return nil }
         return (url, isStale)
@@ -28,7 +36,13 @@ struct PDFAttachment: Codable, Hashable {
 
     /// Re-captures the bookmark after the caller re-imports the same document.
     mutating func refreshBookmark(for url: URL) {
-        bookmark = try? url.bookmarkData(options: .minimalBookmark, includingResourceValuesForKeys: nil, relativeTo: nil)
+        var options: URL.BookmarkCreationOptions = .minimalBookmark
+        #if os(macOS)
+        options.insert(.withSecurityScope)
+        #endif
+        bookmark = try? url.bookmarkData(options: options,
+                                         includingResourceValuesForKeys: nil,
+                                         relativeTo: nil)
     }
 }
 

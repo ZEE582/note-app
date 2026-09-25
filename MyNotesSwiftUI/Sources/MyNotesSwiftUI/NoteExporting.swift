@@ -23,6 +23,12 @@ enum NoteExportFormat: String, CaseIterable, Identifiable {
         }
     }
 
+    /// There is no `UTType.markdown`; the system ships no identifier for
+    /// Markdown, so the type is declared here rather than borrowed from a
+    /// neighbouring format. `readableContentTypes` below includes it so the
+    /// exporter can be offered for `.md` files.
+    static let markdown = UTType(exportedAs: "com.mynotes.app.markdown")
+
     var contentType: UTType {
         switch self {
         case .markdown: return .markdown
@@ -376,12 +382,14 @@ enum NoteExporter {
 
     private static func pdfBody(for note: Note) -> NSMutableAttributedString {
         let body = NSMutableAttributedString()
-        let titleFont = NSFont.boldSystemFont(ofSize: 24)
-        let sectionFont = NSFont.boldSystemFont(ofSize: 15)
-        let bodyFont = NSFont.systemFont(ofSize: 13)
-        let metaFont = NSFont.systemFont(ofSize: 11)
+        // UIKit, not AppKit: the macOS branch is gone and the PDF renderer
+        // draws into a UIKit context.
+        let titleFont = UIFont.boldSystemFont(ofSize: 24)
+        let sectionFont = UIFont.boldSystemFont(ofSize: 15)
+        let bodyFont = UIFont.systemFont(ofSize: 13)
+        let metaFont = UIFont.systemFont(ofSize: 11)
 
-        func append(_ text: String, font: NSFont, color: NSColor = .labelColor, spacing: CGFloat = 4) {
+        func append(_ text: String, font: UIFont, color: UIColor = .label, spacing: CGFloat = 4) {
             body.append(NSAttributedString(string: text, attributes: [
                 .font: font,
                 .foregroundColor: color,
@@ -394,12 +402,12 @@ enum NoteExporter {
         for (label, value) in metadataLines(for: note) {
             body.append(NSAttributedString(string: "\(label): ", attributes: [
                 .font: metaFont,
-                .foregroundColor: .secondaryLabelColor,
+                .foregroundColor: UIColor.secondaryLabel,
                 .paragraphStyle: paragraphStyle(spacing: 2)
             ]))
             body.append(NSAttributedString(string: "\(value)\n", attributes: [
                 .font: metaFont,
-                .foregroundColor: .secondaryLabelColor,
+                .foregroundColor: UIColor.secondaryLabel,
                 .paragraphStyle: paragraphStyle(spacing: 2)
             ]))
         }
@@ -438,7 +446,7 @@ enum NoteExporter {
 
         append("\nتم التصدير من MyNotes · \(Formatters.medium(.now))",
                font: metaFont,
-               color: .secondaryLabelColor,
+               color: UIColor.secondaryLabel,
                spacing: 0)
         return body
     }

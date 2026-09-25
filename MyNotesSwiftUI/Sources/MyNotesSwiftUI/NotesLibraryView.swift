@@ -146,7 +146,7 @@ struct NotesLibraryView: View {
         }
         .listStyle(.sidebar)
         .navigationTitle("MyNotes")
-        .toolbar { sidebarToolbar }
+        .toolbar(content: { sidebarToolbar })
         .safeAreaInset(edge: .bottom) { syncFooter }
     }
 
@@ -314,7 +314,7 @@ struct NotesLibraryView: View {
             }
         }
         .navigationTitle(filter.title)
-        .toolbar { contentToolbar }
+        .toolbar(content: { contentToolbar })
         .animation(.snappy, value: store.banner)
     }
 

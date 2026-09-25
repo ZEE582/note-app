@@ -72,7 +72,19 @@ actor CloudKitCollaboration {
         subscription.notificationInfo = notificationInfo
         
         do {
-            try await database.saveSubscription(subscription)
+            // `CKDatabase.saveSubscription(_:)` has no async overload, only the
+            // completion-handler form, so it needs a continuation. Note it is
+            // `save(_:)`, not `saveSubscription(_:)`: the latter was removed
+            // years ago and did not compile.
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+                database.save(subscription) { _, error in
+                    if let error {
+                        continuation.resume(throwing: error)
+                    } else {
+                        continuation.resume()
+                    }
+                }
+            }
             self.subscription = subscription
         } catch {
             // Subscription might already exist
@@ -116,7 +128,13 @@ actor CloudKitCollaboration {
         share[CKShare.SystemFieldKey.title] = note.title as CKRecordValue
         share.publicPermission = .readOnly
         let saved = try await database.modifyRecords(saving: [record, share], deleting: [])
-        let savedShare = saved.saveResults[share.recordID]?.record as? CKShare
+        // saveResults maps a record ID to a Result, not to the record itself.
+        let savedShare: CKShare?
+        if case .success(let savedRecord) = saved.saveResults[share.recordID] {
+            savedShare = savedRecord as? CKShare
+        } else {
+            savedShare = nil
+        }
         return ShareResult(recordName: record.recordID.recordName, url: savedShare?.url ?? share.url)
     }
     
@@ -171,9 +189,12 @@ actor CloudKitCollaboration {
     }
     
     private func refreshCollaborators(for noteID: UUID) async {
-        let predicate = NSPredicate(format: "noteID == %@ AND lastSeen > %@", 
-                                   noteID.uuidString, 
-                                   Date().addingTimeInterval(-300)) // Active in last 5 minutes
+        // NSPredicate's format arguments must be CVarArg, and Swift's Date is
+        // not. NSDate is the bridge type that is.
+        let cutoff = NSDate(timeIntervalSinceNow: -300) // active in the last 5 minutes
+        let predicate = NSPredicate(format: "noteID == %@ AND lastSeen > %@",
+                                   noteID.uuidString,
+                                   cutoff)
         let query = CKQuery(recordType: "CollaboratorPresence", predicate: predicate)
         
         do {

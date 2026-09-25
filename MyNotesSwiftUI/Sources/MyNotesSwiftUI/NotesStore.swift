@@ -249,7 +249,9 @@ final class NotesStore: ObservableObject {
 
     func refresh() {
         let descriptor = FetchDescriptor<NoteRecord>(sortBy: [SortDescriptor(\.updatedAt, order: .reverse)])
-        notes = (try? modelContext.fetch(descriptor).map(\.asNote)) ?? []
+        // `asNote` is a method, not a stored property, so `\.asNote` is not a
+        // valid key path; the conversion has to be an explicit closure.
+        notes = (try? modelContext.fetch(descriptor))?.map { $0.asNote() } ?? []
     }
 
     // MARK: - Banner

@@ -159,10 +159,11 @@ struct PencilCanvas: UIViewRepresentable {
     }
 
     private func applyTool(to canvas: PKCanvasView) {
-        let tool = PKInkingTool(.pen, color: UIColor(inkColor), width: penWidth)
-        if canvas.tool as AnyObject !== tool {
-            canvas.tool = tool
-        }
+        // Assigning unconditionally is intentional. The previous guard
+        // compared `canvas.tool as AnyObject !== tool`, but PKInkingTool is a
+        // struct: boxing it produces a fresh object on every call, so the
+        // identity check was always true and never skipped anything.
+        canvas.tool = PKInkingTool(.pen, color: UIColor(inkColor), width: penWidth)
     }
 
     final class Coordinator: NSObject, PKCanvasViewDelegate {
