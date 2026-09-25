@@ -57,10 +57,22 @@ jobs:
             ENABLE_BITCODE=NO \
             build 2>&1 | tee ../build.log
 
-      # The job log is unreadable from outside without actions:read on the
-      # token, so the raw compiler output is published as an artifact too.
-      # Uploaded whether or not the build passed, because a passing build makes
-      # it redundant rather than wrong.
+      # The job log and the artifact both need actions:read to read back, and
+      # a plain read token does not have it. The job summary comes back through
+      # the checks API instead, so that is where the diagnostics go.
+      - name: Publish build log
+        if: always()
+        working-directory: MyNotesSwiftUI
+        run: |
+          {
+            echo "### Build result: ${{ job.status }}"
+            echo
+            echo '```'
+            grep -E 'error:|warning: .*(deprecated|unused)|note:' ../build.log 2>/dev/null \
+              | sort -u | head -60 || echo "no compiler diagnostics captured"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload build log
         if: always()
         uses: actions/upload-artifact@v4
