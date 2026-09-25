@@ -49,133 +49,30 @@ struct NoteEditorView: View {
             }
             .navigationTitle(distractionFree ? "" : "تحرير الملاحظة")
             .toolbar {
-        ToolbarItemGroup(placement: .secondaryAction) {
-            if store.syncStatus == .cloud && !store.activeCollaborators.isEmpty {
-                Menu {
-                    ForEach(store.activeCollaborators, id: \.userID) { collaborator in
-                        Label {
-                            HStack {
-                                Text(collaborator.name)
-                                if collaborator.isEditing {
-                                    Text("(يحرر الآن)").foregroundStyle(.secondary)
-                                }
-                            }
-                        } icon: {
-                            Image(systemName: collaborator.isEditing ? "circle.fill" : "circle")
-                                .foregroundStyle(collaborator.isEditing ? Color.green : Color.gray)
-                        }
-                    }
-                } label: {
-                    Label("\(store.activeCollaborators.count) متعاون", systemImage: "person.2")
-                        .foregroundStyle(.green)
-                }
-            }
-            Button { showingCollaborationSettings = true } label: {
-                Label("إعدادات المشاركة", systemImage: "person.badge.plus")
-            }
-        }
-            }
-            .toolbar {
-        ToolbarItemGroup(placement: .primaryAction) {
-            if !distractionFree {
-                Menu {
-                    Picker("قالب الورق", selection: $paperTemplate) {
-                        ForEach(PaperTemplate.allCases) { template in
-                            Label(template.title, systemImage: template.icon).tag(template)
-                        }
-                    }
-                    Picker("سُمك القلم", selection: $penWidth) {
-                        ForEach(PenWidth.allCases) { width in
-                            Text(width.title).tag(width)
-                        }
-                    }
-                    Picker("لون الحبر", selection: $inkColor) {
-                        ForEach(InkColor.allCases) { color in
-                            Text(color.title).tag(color)
-                        }
-                    }
-                } label: {
-                    Label("أدوات الكتابة", systemImage: "paintbrush")
-                }
-            }
-
-            Menu {
-                Button { showingDrawing = true } label: {
-                    Label("الرسم بـ PencilKit", systemImage: "pencil.tip")
-                }
-                Button { showingImporter = true } label: {
-                    Label("إرفاق PDF", systemImage: "doc.badge.plus")
-                }
-                Button { toggleAudio() } label: {
-                    Label(audio.isRecording ? "إيقاف التسجيل" : "تسجيل المحاضرة",
-                          systemImage: audio.isRecording ? "stop.circle" : "mic")
-                }
-                if audio.isRecording {
-                    Button { addAudioAnchor() } label: {
-                        Label("تثبيت اللحظة الحالية", systemImage: "bookmark")
-                    }
-                }
-            } label: {
-                Label("الالتقاط والمرفقات", systemImage: "paperclip")
-            }
-            .disabled(distractionFree)
-
-            Menu {
-                Button { generateCards() } label: {
-                    Label("توليد بطاقات من المحتوى", systemImage: "wand.and.stars")
-                }
-                Button { showingManualCard = true } label: {
-                    Label("بطاقة يدوية", systemImage: "plus.rectangle.on.rectangle")
-                }
-                Button { showingReview = true } label: {
-                    Label("مراجعة البطاقات", systemImage: "play.circle")
-                }
-                .disabled(note.flashcards.isEmpty)
-            } label: {
-                Label("البطاقات", systemImage: "rectangle.stack.badge.plus")
-            }
-            .disabled(distractionFree)
-
-            Menu {
-                Button("تصدير Markdown") { export(.markdown) }
-                Button("تصدير PDF") { export(.pdf) }
-                Button("تصدير HTML (للويب)") { export(.html) }
-                Divider()
-                Button {
-                    Clipboard.copy(NoteExporter.markdown(for: note))
-                    errorMessage = nil
-                    store.showBanner(.success, "تم نسخ الملاحظة بصيغة Markdown")
-                } label: {
-                    Label("نسخ Markdown", systemImage: "doc.on.doc")
-                }
-                Divider()
-                Button {
-                    createReadOnlyLink()
-                } label: {
-                    Label("إنشاء رابط قراءة فقط", systemImage: "link.badge.plus")
-                }
-                .disabled(store.syncStatus != .cloud)
-                if let url = shareURL ?? note.cloudShareURL.flatMap(URL.init(string:)) {
-                    ShareLink(item: url) {
-                        Label("مشاركة الرابط", systemImage: "square.and.arrow.up")
-                    }
-                }
-            } label: {
-                Label("تصدير ومشاركة", systemImage: "square.and.arrow.up")
-            }
-            .disabled(distractionFree)
-
-            Button {
-                withAnimation(.snappy) { distractionFree.toggle() }
-            } label: {
-                Label(distractionFree ? "إنهاء التركيز" : "وضع التركيز",
-                      systemImage: distractionFree ? "rectangle.expand.vertical" : "rectangle.compress.vertical")
-            }
-
-            Button("حفظ") { flush() }
-                .fontWeight(.semibold)
-                .disabled(!isDirty)
-        }
+                NoteEditorToolbar(
+                    store: store,
+                    note: note,
+                    audio: audio,
+                    isDirty: isDirty,
+                    shareURL: shareURL,
+                    $distractionFree: $distractionFree,
+                    $paperTemplate: $paperTemplate,
+                    $inkColor: $inkColor,
+                    $penWidth: $penWidth,
+                    $showingCollaborationSettings: $showingCollaborationSettings,
+                    $showingManualCard: $showingManualCard,
+                    $showingReview: $showingReview,
+                    $showingDrawing: $showingDrawing,
+                    $showingImporter: $showingImporter,
+                    onExport: { export($0) },
+                    onToggleAudio: { toggleAudio() },
+                    onAddAudioAnchor: { addAudioAnchor() },
+                    onGenerateCards: { generateCards() },
+                    onCreateReadOnlyLink: { createReadOnlyLink() },
+                    onFlush: { flush() },
+                    onCopyMarkdown: { copyMarkdown() },
+                    onToggleFocus: { withAnimation(.snappy) { distractionFree.toggle() } }
+                )
             }
             .fileImporter(isPresented: $showingImporter, allowedContentTypes: [.pdf]) { result in
                 importPDF(result)
@@ -610,6 +507,14 @@ struct NoteEditorView: View {
         showingExporter = true
     }
 
+    /// Lives here rather than inline in the toolbar so the toolbar struct
+    /// does not have to hold `errorMessage` just to clear it.
+    private func copyMarkdown() {
+        Clipboard.copy(NoteExporter.markdown(for: note))
+        errorMessage = nil
+        store.showBanner(.success, "تم نسخ الملاحظة بصيغة Markdown")
+    }
+
     @MainActor
     private func generateCards() {
         let generated = FlashcardGenerator.generate(from: note.content)
@@ -979,5 +884,162 @@ struct CollaborationSettingsView: View {
 
     private func timeAgo(_ date: Date) -> String {
         Formatters.relative(date)
+    }
+}
+
+/// The editor toolbar lives in its own ToolbarContent type rather than in
+/// the body. Inline it made one expression that the type-checker could not
+/// solve, and a some ToolbarContent property was ambiguous against the
+/// other .toolbar overloads. A concrete struct sidesteps both problems:
+/// the builder sees a plain type, and it is type-checked on its own.
+private struct NoteEditorToolbar: ToolbarContent {
+    let store: NotesStore
+    let note: Note
+    let audio: AudioRecorder
+    let isDirty: Bool
+    let shareURL: URL?
+    @Binding var distractionFree: Bool
+    @Binding var paperTemplate: PaperTemplate
+    @Binding var inkColor: InkColor
+    @Binding var penWidth: PenWidth
+    @Binding var showingCollaborationSettings: Bool
+    @Binding var showingManualCard: Bool
+    @Binding var showingReview: Bool
+    @Binding var showingDrawing: Bool
+    @Binding var showingImporter: Bool
+    let onExport: (NoteExportFormat) -> Void
+    let onToggleAudio: () -> Void
+    let onAddAudioAnchor: () -> Void
+    let onGenerateCards: () -> Void
+    let onCreateReadOnlyLink: () -> Void
+    let onFlush: () -> Void
+    let onCopyMarkdown: () -> Void
+    let onToggleFocus: () -> Void
+
+    var body: some ToolbarContent {
+        ToolbarItemGroup(placement: .secondaryAction) {
+            if store.syncStatus == .cloud && !store.activeCollaborators.isEmpty {
+                Menu {
+                    ForEach(store.activeCollaborators, id: \.userID) { collaborator in
+                        Label {
+                            HStack {
+                                Text(collaborator.name)
+                                if collaborator.isEditing {
+                                    Text("(يحرر الآن)").foregroundStyle(.secondary)
+                                }
+                            }
+                        } icon: {
+                            Image(systemName: collaborator.isEditing ? "circle.fill" : "circle")
+                                .foregroundStyle(collaborator.isEditing ? Color.green : Color.gray)
+                        }
+                    }
+                } label: {
+                    Label("\(store.activeCollaborators.count) متعاون", systemImage: "person.2")
+                        .foregroundStyle(.green)
+                }
+            }
+            Button { showingCollaborationSettings = true } label: {
+                Label("إعدادات المشاركة", systemImage: "person.badge.plus")
+            }
+
+        ToolbarItemGroup(placement: .primaryAction) {
+            if !distractionFree {
+                Menu {
+                    Picker("قالب الورق", selection: paperTemplate) {
+                        ForEach(PaperTemplate.allCases) { template in
+                            Label(template.title, systemImage: template.icon).tag(template)
+                        }
+                    }
+                    Picker("سُمك القلم", selection: penWidth) {
+                        ForEach(PenWidth.allCases) { width in
+                            Text(width.title).tag(width)
+                        }
+                    }
+                    Picker("لون الحبر", selection: inkColor) {
+                        ForEach(InkColor.allCases) { color in
+                            Text(color.title).tag(color)
+                        }
+                    }
+                } label: {
+                    Label("أدوات الكتابة", systemImage: "paintbrush")
+                }
+            }
+
+            Menu {
+                Button { showingDrawing = true } label: {
+                    Label("الرسم بـ PencilKit", systemImage: "pencil.tip")
+                }
+                Button { showingImporter = true } label: {
+                    Label("إرفاق PDF", systemImage: "doc.badge.plus")
+                }
+                Button { onToggleAudio() } label: {
+                    Label(audio.isRecording ? "إيقاف التسجيل" : "تسجيل المحاضرة",
+                          systemImage: audio.isRecording ? "stop.circle" : "mic")
+                }
+                if audio.isRecording {
+                    Button { onAddAudioAnchor() } label: {
+                        Label("تثبيت اللحظة الحالية", systemImage: "bookmark")
+                    }
+                }
+            } label: {
+                Label("الالتقاط والمرفقات", systemImage: "paperclip")
+            }
+            .disabled(distractionFree)
+
+            Menu {
+                Button { onGenerateCards() } label: {
+                    Label("توليد بطاقات من المحتوى", systemImage: "wand.and.stars")
+                }
+                Button { showingManualCard = true } label: {
+                    Label("بطاقة يدوية", systemImage: "plus.rectangle.on.rectangle")
+                }
+                Button { showingReview = true } label: {
+                    Label("مراجعة البطاقات", systemImage: "play.circle")
+                }
+                .disabled(note.flashcards.isEmpty)
+            } label: {
+                Label("البطاقات", systemImage: "rectangle.stack.badge.plus")
+            }
+            .disabled(distractionFree)
+
+            Menu {
+                Button("تصدير Markdown") { onExport(.markdown) }
+                Button("تصدير PDF") { onExport(.pdf) }
+                Button("تصدير HTML (للويب)") { onExport(.html) }
+                Divider()
+                Button {
+                    onCopyMarkdown()
+                } label: {
+                    Label("نسخ Markdown", systemImage: "doc.on.doc")
+                }
+                Divider()
+                Button {
+                    onCreateReadOnlyLink()
+                } label: {
+                    Label("إنشاء رابط قراءة فقط", systemImage: "link.badge.plus")
+                }
+                .disabled(store.syncStatus != .cloud)
+                if let url = shareURL ?? note.cloudShareURL.flatMap(URL.init(string:)) {
+                    ShareLink(item: url) {
+                        Label("مشاركة الرابط", systemImage: "square.and.arrow.up")
+                    }
+                }
+            } label: {
+                Label("تصدير ومشاركة", systemImage: "square.and.arrow.up")
+            }
+            .disabled(distractionFree)
+
+            Button {
+                onToggleFocus()
+            } label: {
+                Label(distractionFree ? "إنهاء التركيز" : "وضع التركيز",
+                      systemImage: distractionFree ? "rectangle.expand.vertical" : "rectangle.compress.vertical")
+            }
+
+            Button("حفظ") { onFlush() }
+                .fontWeight(.semibold)
+                .disabled(!isDirty)
+            }
+        }
     }
 }
