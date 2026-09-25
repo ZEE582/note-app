@@ -1168,26 +1168,24 @@ private struct NoteEditorToolbar: ToolbarContent {
 
         ToolbarItemGroup(placement: .primaryAction) {
             if !distractionFree {
-                ToolbarItem {
-                    Menu {
-                        Picker("قالب الورق", selection: $paperTemplate) {
-                            ForEach(PaperTemplate.allCases) { template in
-                                Label(template.title, systemImage: template.icon).tag(template)
-                            }
+                Menu {
+                    Picker("قالب الورق", selection: $paperTemplate) {
+                        ForEach(PaperTemplate.allCases, id: \.self) { template in
+                            Label(template.title, systemImage: template.icon).tag(template)
                         }
-                        Picker("سُمك القلم", selection: $penWidth) {
-                            ForEach(PenWidth.allCases) { width in
-                                Text(width.title).tag(width)
-                            }
-                        }
-                        Picker("لون الحبر", selection: $inkColor) {
-                            ForEach(InkColor.allCases) { color in
-                                Text(color.title).tag(color)
-                            }
-                        }
-                    } label: {
-                        Label("أدوات الكتابة", systemImage: "paintbrush")
                     }
+                    Picker("سُمك القلم", selection: $penWidth) {
+                        ForEach(PenWidth.allCases, id: \.self) { width in
+                            Text(width.title).tag(width)
+                        }
+                    }
+                    Picker("لون الحبر", selection: $inkColor) {
+                        ForEach(InkColor.allCases, id: \.self) { color in
+                            Text(color.title).tag(color)
+                        }
+                    }
+                } label: {
+                    Label("أدوات الكتابة", systemImage: "paintbrush")
                 }
             }
 
