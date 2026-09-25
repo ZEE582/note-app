@@ -1,0 +1,81 @@
+name: Build unsigned IPA
+
+# Builds the iPad app on a macOS runner and uploads the unsigned .ipa as an
+# artifact. There is deliberately no signing step: the .ipa is re-signed locally
+# by Sideloadly with your own Apple ID, which is the only route that works from
+# Windows. A signed build needs either a Mac or an App Store Connect API key,
+# neither of which belongs in a repository.
+#
+# Consequence: an unsigned .ipa carries no iCloud entitlement, so the app runs
+# with its local SwiftData store and the banner reads "تخزين محلي". That is
+# expected. CloudKit needs a paid Apple Developer account and a real signing
+# build — see DEPLOYMENT.md.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    # macOS only: iOS toolchains do not exist on other runners.
+    runs-on: macos-15
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        working-directory: MyNotesSwiftUI
+        run: |
+          xcodegen generate
+          test -d MyNotesApp.xcodeproj
+
+      - name: Build unsigned app for iPad
+        working-directory: MyNotesSwiftUI
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project MyNotesApp.xcodeproj \
+            -scheme MyNotes \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            DEVELOPMENT_TEAM="" \
+            ENABLE_BITCODE=NO \
+            build
+
+      - name: Package as .ipa
+        working-directory: MyNotesSwiftUI
+        run: |
+          set -euo pipefail
+          APP="$(find build/Build/Products/Release-iphoneos -maxdepth 1 -name '*.app' | head -1)"
+          if [ -z "$APP" ]; then
+            echo "No .app produced by the build" >&2
+            find build -name '*.app' -maxdepth 5 || true
+            exit 1
+          fi
+          rm -rf Payload && mkdir -p Payload
+          cp -R "$APP" Payload/
+          zip -qry MyNotes-unsigned.ipa Payload
+          unzip -l MyNotes-unsigned.ipa | head -20
+
+      - name: Upload .ipa
+        uses: actions/upload-artifact@v4
+        with:
+          name: MyNotes-unsigned-ipa
+          path: MyNotesSwiftUI/MyNotes-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 30

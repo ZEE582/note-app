@@ -56,6 +56,14 @@ and run on the iPad. `DEPLOYMENT.md` walks through it, including a first-launch
 checklist. Building an iOS app requires macOS and a paid Apple Developer
 account.
 
+If you do not have a Mac, `DEPLOYMENT-WINDOWS.md` covers the other route: a
+GitHub Actions macOS runner builds an unsigned `.ipa` and Sideloadly installs
+it on the iPad over USB. That path cannot carry the iCloud entitlement, so the
+app runs on its local store.
+
+Swift Playgrounds is not a viable host for this project: it cannot use CloudKit
+and does not allow the entitlements `MyNotes.entitlements` needs.
+
 ## Testing
 
 The pure-logic layers (flashcard scheduling, template generation, Markdown and
