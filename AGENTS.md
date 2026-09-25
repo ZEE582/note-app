@@ -12,8 +12,24 @@ entire project. Nothing else in the repo is live code.
 - **The UI is Arabic-first and right-to-left.** The root view sets
   `.environment(\.layoutDirection, .rightToLeft)`. User-facing strings are
   Arabic; keep it that way and keep the RTL assumption when adding views.
-- **Do not add a `Project.swift` or an `.xcodeproj` to the package directory.**
-  The app target is created in Xcode from the package.
+- **Do not add a `Project.swift` or a hand-written `.xcodeproj` to the
+  repository.** The app target is declared in `MyNotesSwiftUI/project.yml` and
+  generated with `xcodegen generate`. The `.xcodeproj` is gitignored on purpose
+  so it cannot drift from the YAML. See `DEPLOYMENT.md`.
+- **The app target compiles `Sources/MyNotesSwiftUI` directly.** It does not
+  link `Package.swift` as a dependency, because that package exports an
+  executable product and an executable cannot be linked into an app target.
+  There is therefore exactly one `@main`, in `MyNotesApp.swift`, and it must
+  stay that way.
+- **`Info.plist` is hand-maintained and committed** with
+  `GENERATE_INFOPLIST_FILE: NO`. Adding an API that needs a usage description
+  means adding the key there in the same change. `AVAudioRecorder` is why
+  `NSMicrophoneUsageDescription` is present; without it the app terminates on
+  first mic access.
+- **CloudKit schema rule.** Every stored property on `NoteRecord` must be
+  optional or carry a default value, including any property added later.
+  SwiftData's CloudKit backing rejects the schema at runtime otherwise, and it
+  throws on first fetch rather than failing the build.
 - **Keep the pure-logic layer free of UIKit and SwiftUI.** `FlashcardLogic`,
   `StudyTemplates`, and the text portion of `NoteExporting` are the parts that
   can be compiled and tested on a plain host. Anything added to them has to stay
@@ -35,7 +51,6 @@ the entitlement is absent, so local development needs no provisioning. Read
 
 There is no Apple SDK on Windows or Linux, so a full build is not possible off
 a Mac. What *is* possible:
-
 ```sh
 # syntax check every file
 swiftc -parse -swift-version 5 Sources/MyNotesSwiftUI/<File>.swift

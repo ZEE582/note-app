@@ -3,7 +3,8 @@
 .swiftpm/
 Package.resolved
 
-# Xcode
+# Xcode — the project is generated from MyNotesSwiftUI/project.yml by
+# `xcodegen generate`, so the .xcodeproj is derived and must not be committed.
 *.xcodeproj/
 *.xcworkspace/
 !default.xcworkspace
@@ -32,5 +33,3 @@ DerivedData/
 # Tooling
 *.log
 *.tmp
-*.tsbuildinfo
-node_modules

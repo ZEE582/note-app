@@ -16,9 +16,12 @@ The package targets iOS only. There is no macOS build.
 
 ```
 MyNotesSwiftUI/
-  Package.swift              Swift package manifest (iOS 17+)
+  project.yml                XcodeGen manifest — source of truth for the app target
+  Info.plist                 Usage descriptions, orientations, iPad keys
+  Assets.xcassets            AppIcon, AccentColor
   MyNotes.entitlements       iCloud container + CloudKit capability
   CLOUDKIT_SETUP.md          container and schema setup steps
+  DEPLOYMENT.md              generating the project and installing on an iPad
   Sources/MyNotesSwiftUI/
     MyNotesApp.swift         App entry point, Spotlight deep links
     NotesStore.swift         SwiftData stack, CloudKit fallback, autosave
@@ -38,15 +41,19 @@ MyNotesSwiftUI/
 
 ## Build
 
-Open `MyNotesSwiftUI` as a Swift package in Xcode, or:
+The `.xcodeproj` is generated, not committed:
 
 ```sh
-swift build -Xswiftc "-sdk" -Xswiftc "$(xcrun --show-sdk-path --sdk iphoneos)"
+brew install xcodegen
+cd MyNotesSwiftUI
+xcodegen generate
+open MyNotesApp.xcodeproj
 ```
 
-An `.xcodeproj` is not checked in. Create one in Xcode if you need a runnable
-app target with the entitlements attached — the package alone does not carry
-`MyNotes.entitlements`.
+Then set your Team and bundle identifier, add the iCloud/CloudKit capability,
+and run on the iPad. `DEPLOYMENT.md` walks through it, including a first-launch
+checklist. Building an iOS app requires macOS and a paid Apple Developer
+account.
 
 ## Testing
 

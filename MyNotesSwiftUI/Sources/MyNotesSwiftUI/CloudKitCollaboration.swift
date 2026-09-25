@@ -14,7 +14,13 @@ import CloudKit
 /// This avoids mutating or replacing the user's local source of truth.
 actor CloudKitCollaboration {
     static let shared = CloudKitCollaboration()
-    private let database = CKContainer(identifier: "iCloud.com.mynotes.app").privateCloudDatabase
+    /// `CKContainer(identifier:)` raises an Objective-C exception rather than
+    /// throwing when the identifier is not in the signed entitlements, so it
+    /// cannot be built in a stored property: a build without the iCloud
+    /// capability would raise inside `shared` during `init()` and take the app
+    /// down at launch. Resolving it on first use keeps launch safe and defers
+    /// the failure to the point where sharing is actually attempted.
+    private lazy var database = CKContainer(identifier: "iCloud.com.mynotes.app").privateCloudDatabase
     private var subscription: CKDatabaseSubscription?
     private var activeCollaborators: [String: CollaboratorInfo] = [:]
     

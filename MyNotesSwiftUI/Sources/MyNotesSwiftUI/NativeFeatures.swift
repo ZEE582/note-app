@@ -19,6 +19,31 @@ final class AudioRecorder: NSObject, ObservableObject {
     func start() {
         guard !isRecording else { return }
         permissionDenied = false
+
+        // The mic is a runtime permission, not a build-time one. Without a
+        // prior grant, `record()` below fails silently and the timer would run
+        // against a recorder that never captured anything.
+        switch AVAudioSession.sharedInstance().recordPermission {
+        case .granted:
+            beginRecording()
+        case .denied:
+            permissionDenied = true
+        case .undetermined:
+            AVAudioSession.sharedInstance().requestRecordPermission { [weak self] granted in
+                Task { @MainActor in
+                    guard let self, granted else {
+                        self?.permissionDenied = true
+                        return
+                    }
+                    self.beginRecording()
+                }
+            }
+        @unknown default:
+            permissionDenied = true
+        }
+    }
+
+    private func beginRecording() {
         let session = AVAudioSession.sharedInstance()
         do {
             try session.setCategory(.record, mode: .measurement)
@@ -41,10 +66,17 @@ final class AudioRecorder: NSObject, ObservableObject {
             permissionDenied = true
             return
         }
+        // `record()` returns false rather than throwing when the session is
+        // unusable, so the result has to be checked before the UI commits to a
+        // recording state and before the file name is handed to the note.
+        guard recorder.record() else {
+            permissionDenied = true
+            try? FileManager.default.removeItem(at: url)
+            return
+        }
         self.recorder = recorder
         fileName = name
         duration = 0
-        recorder.record()
         isRecording = true
 
         let timer = Timer(timeInterval: 0.2, repeats: true) { [weak self] _ in

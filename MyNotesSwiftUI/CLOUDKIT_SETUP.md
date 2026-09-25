@@ -1,52 +1,74 @@
 # CloudKit setup
 
-The SwiftUI target uses SwiftData with `cloudKitDatabase: .automatic`.
-This keeps notes local-first and lets CloudKit synchronize records when the
-user is signed in to iCloud. No application login is required.
+The app uses SwiftData with `cloudKitDatabase: .automatic`, which keeps notes
+local-first and synchronizes through iCloud when the user is signed in. There is
+no application login.
 
-## Xcode setup on macOS
+## The container identifier appears in two places
 
-1. Create or open the iOS/iPadOS/macOS SwiftUI app target.
-2. Add `MyNotes.entitlements` to the target and replace
-   `iCloud.com.mynotes.app` with the container identifier owned by the
-   Apple Developer team.
-3. In **Signing & Capabilities**, add **iCloud** and enable **CloudKit**.
-4. Create the same container in CloudKit Dashboard and deploy the development
-   schema before testing on multiple devices.
-5. Use the same Apple Developer team and bundle identifier for iPhone, iPad,
-   and Mac targets.
+Changing it means editing **both**, or the app will launch and then fail the
+first time a note is shared:
 
-If CloudKit cannot be initialized, `NotesStore` falls back to a persistent
-local SwiftData store and surfaces the state as `تخزين محلي`. Once the
-container and entitlements are configured correctly, the app reports
-`مزامنة iCloud مفعلة`.
+| Location | Form |
+| --- | --- |
+| `MyNotes.entitlements` | `com.apple.developer.icloud-container-identifiers` |
+| `Sources/MyNotesSwiftUI/CloudKitCollaboration.swift` | `CKContainer(identifier:)` in the `database` property |
 
-## مشاركة القراءة فقط والتعاون
+It defaults to `iCloud.com.mynotes.app`, which matches the bundle identifier in
+`project.yml` (`com.mynotes.app`).
 
-من محرر الملاحظة، افتح قائمة الأدوات واختر **إنشاء رابط قراءة فقط**. ينشئ
-`CloudKitCollaboration` سجل `SharedNoteSnapshot` و`CKShare` بصلاحية
-`readOnly`، ثم يعرض رابط CloudKit عبر `ShareLink`. هذا ليس رابط HTTP مستضافًا
-من التطبيق ولا يحتاج backend خاصًا. المصدر الأصلي يظل في SwiftData محليًا؛
-وعند حفظ ملاحظة سبق مشاركتها، يحاول التطبيق تحديث snapshot في CloudKit دون
-حجب الحفظ المحلي.
+## Setup on macOS
 
-هذه الطبقة مقصودة كحد CloudKit واضح لأن مشاركة SwiftData المباشرة (`CKShare`
-على `ModelContainer`) تختلف واجهاتها حسب إصدار Xcode/SDK وتحتاج مخططًا
-سحابيًا واختبار قبول الدعوات. المشاركة الحالية عملية كرابط قراءة فقط، وليست
-تحريرًا متزامنًا حرفًا بحرف بين عدة محررين. لا تُعرض حالة CloudKit للمستخدم
-على أنها backend أو استضافة ويب.
+1. Generate the project: `xcodeproj generate` (or `brew install xcodegen`
+   first). See `DEPLOYMENT.md`.
+2. Select the `MyNotes` target → **Signing & Capabilities** → add **iCloud**,
+   then tick **CloudKit**.
+3. Create the container in the
+   [CloudKit Dashboard](https://icloud.developer.apple.com/) under the same
+   identifier used in the two locations above.
+4. Set your **Team** under Signing. The bundle identifier must be unique to
+   your team; rename it in `project.yml` if `com.mynotes.app` is taken.
+5. Deploy the schema: **Schema → Development → Deploy Schema**. Without this
+   the container has no record types and every write fails.
+6. Build and run on the device. Confirm the banner reads
+   `مزامنة iCloud مفعلة` rather than `تخزين محلي`.
 
-## التصدير
+## Behaviour when CloudKit is unavailable
 
-من قائمة الأدوات في `NoteEditorView` يمكن تصدير الملاحظة إلى Markdown أو PDF
-باستخدام `FileDocument` وواجهة النظام. التصدير لا يسطّح ملف PDF المستورد ولا
-يعدل المصدر؛ bookmark الملف يبقى منفصلًا، ويمكن إضافة طبقة PDFKit لاحقًا عند
-الحاجة إلى تصدير annotations على نسخة.
+`NotesStore` falls back to a persistent local SwiftData store and reports
+`تخزين محلي`, so notes are still saved and readable. Two caveats:
 
-## Spotlight indexing
+- The fallback only covers the **SwiftData** store. `CloudKitCollaboration`
+  resolves its container lazily, so a missing capability no longer crashes the
+  app at launch, but **sharing a note will still fail** until the container is
+  provisioned.
+- With the entitlement present but the container not yet created, SwiftData
+  still builds its container successfully, so the app falls back silently and
+  sync errors appear at runtime rather than as a clear configuration error.
+  Deploying the schema first avoids this.
 
-The native target indexes note titles, typed content, folders, tags, and
-iPad handwriting recognized through Vision. Spotlight results use the note
-UUID and open the matching note in the app. This requires testing the native
-target on iOS or macOS; the Expo web fallback cannot register items in device
-Spotlight.
+## Read-only sharing and collaboration
+
+From the note toolbar, **إنشاء رابط قراءة فقط** writes a `SharedNoteSnapshot`
+record and a `readOnly` `CKShare`, then surfaces the CloudKit link through
+`ShareLink`. This is not a hosted HTTP link and needs no backend. The original
+note stays in local SwiftData; on save, a previously shared note also attempts
+to update its snapshot, and a CloudKit failure does not block the local save.
+
+This is a deliberately thin CloudKit layer. Sharing SwiftData directly
+(`CKShare` on a `ModelContainer`) varies across Xcode/SDK versions and needs a
+deployed schema plus invite-acceptance testing. What exists is a read-only
+link, not character-level live co-editing. Do not describe it to users as a
+backend or as web hosting.
+
+## Export
+
+The note toolbar exports to Markdown, HTML, or PDF via `FileDocument` and the
+system share sheet. Export does not flatten an imported PDF or modify the
+source; the file bookmark stays separate.
+
+## Spotlight
+
+The app indexes note titles, typed content, folders, tags, and iPad handwriting
+recognized through Vision. Results carry the note UUID and open the matching
+note. This can only be verified on a real iOS/iPadOS device or simulator.

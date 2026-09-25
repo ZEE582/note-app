@@ -1,0 +1,79 @@
+name: MyNotesApp
+
+options:
+  bundleIdPrefix: com.mynotes
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+  generateEmptyDirectories: false
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    # Every user-facing string is Arabic and the root view pins RTL, so the
+    # development region is Arabic. Without this the system lays out date and
+    # number formats against a mismatched locale.
+    DEVELOPMENT_LANGUAGE: ar
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    SWIFT_EMIT_LOC_STRINGS: YES
+  configs:
+    Debug:
+      SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
+      SWIFT_OPTIMIZATION_LEVEL: "-Onone"
+    Release:
+      SWIFT_OPTIMIZATION_LEVEL: "-O"
+
+targets:
+  MyNotes:
+    type: application
+    platform: iOS
+
+    # The app target compiles the sources directly rather than linking the
+    # SwiftPM package. Package.swift exports an executable product, and an
+    # executable cannot be linked into an app target; keeping the two build
+    # definitions separate avoids the conflict.
+    sources:
+      - path: Sources/MyNotesSwiftUI
+        excludes:
+          - "**/.DS_Store"
+
+    info:
+      path: Info.plist
+      # Info.plist is committed and hand-maintained; Xcode must not rewrite it.
+      properties: {}
+
+    settings:
+      base:
+        PRODUCT_NAME: MyNotes
+        PRODUCT_BUNDLE_IDENTIFIER: com.mynotes.app
+        CODE_SIGN_ENTITLEMENTS: MyNotes.entitlements
+        # UI is laid out for iPad; iPhone is not a shipping target.
+        TARGETED_DEVICE_FAMILY: "2"
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+        CODE_SIGN_STYLE: Automatic
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        ENABLE_PREVIEWS: YES
+        SWIFT_STRICT_CONCURRENCY: minimal
+
+    entitlements:
+      path: MyNotes.entitlements
+      properties: {}
+
+schemes:
+  MyNotes:
+    build:
+      targets:
+        MyNotes: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release

@@ -137,25 +137,30 @@ struct Note: Codable, Identifiable, Hashable {
 
 @Model
 final class NoteRecord {
-    var id: UUID
-    var title: String
-    var content: String
-    var folder: String
-    var tagsJSON: String
+    // Every stored property carries a default and every relationship-free
+    // property is either optional or defaulted. CloudKit-backed SwiftData
+    // rejects the schema at runtime otherwise: a field that arrives from iCloud
+    // without a value has nowhere to land, and the store throws on first fetch
+    // instead of failing the build.
+    var id: UUID = UUID()
+    var title: String = ""
+    var content: String = ""
+    var folder: String = ""
+    var tagsJSON: String = "[]"
     var drawingData: Data?
     var audioFileName: String?
-    var audioDuration: Double
-    var audioAnchorsJSON: String
+    var audioDuration: Double = 0
+    var audioAnchorsJSON: String = "[]"
     var pdfName: String?
     var pdfBookmark: Data?
     var attachmentsJSON: String = "[]"
-    var flashcardsJSON: String
+    var flashcardsJSON: String = "[]"
     var cloudShareRecordName: String?
     var cloudShareURL: String?
     var isPinned: Bool = false
     var isArchived: Bool = false
     var createdAt: Date = Date.now
-    var updatedAt: Date
+    var updatedAt: Date = Date.now
 
     init(note: Note) {
         id = note.id
