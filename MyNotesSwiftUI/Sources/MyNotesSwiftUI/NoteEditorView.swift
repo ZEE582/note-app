@@ -38,43 +38,7 @@ struct NoteEditorView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            // An explicit conditional rather than a `Group` wrapping both
-            // branches: the two layouts are large enough that the ViewBuilder
-            // exceeded the type-checker's budget and failed the build.
-            if distractionFree {
-                focusLayout
-            } else {
-                standardLayout
-            }
-        }
-        .navigationTitle(distractionFree ? "" : "تحرير الملاحظة")
-        .toolbar {
-            NoteEditorToolbar(
-                store: store,
-                note: note,
-                audio: audio,
-                isDirty: isDirty,
-                shareURL: shareURL,
-                $distractionFree: $distractionFree,
-                $paperTemplate: $paperTemplate,
-                $inkColor: $inkColor,
-                $penWidth: $penWidth,
-                $showingCollaborationSettings: $showingCollaborationSettings,
-                $showingManualCard: $showingManualCard,
-                $showingReview: $showingReview,
-                $showingDrawing: $showingDrawing,
-                $showingImporter: $showingImporter,
-                onExport: { export($0) },
-                onToggleAudio: { toggleAudio() },
-                onAddAudioAnchor: { addAudioAnchor() },
-                onGenerateCards: { generateCards() },
-                onCreateReadOnlyLink: { createReadOnlyLink() },
-                onFlush: { flush() },
-                onCopyMarkdown: { copyMarkdown() },
-                onToggleFocus: { withAnimation(.snappy) { distractionFree.toggle() } }
-            )
-        }
+        editorScaffold
         .noteEditorSheets(
             note: $note,
             inkColor: inkColor.color,
@@ -126,6 +90,55 @@ struct NoteEditorView: View {
             onFlush: flush,
             onAutosave: autosaveLoop
         )
+    }
+
+    /// Split out of `body` so that neither the navigation scaffold nor
+    /// the modifier chain is a single large expression. The type-checker
+    /// walks one expression as a unit; chained here it stopped being able
+    /// to produce any diagnostic at all for `body`, let alone a useful one.
+    private var editorScaffold: some View {
+        NavigationStack {
+            editorContent
+        }
+        .navigationTitle(distractionFree ? "" : "تحرير الملاحظة")
+        .toolbar {
+            NoteEditorToolbar(
+                store: store,
+                note: note,
+                audio: audio,
+                isDirty: isDirty,
+                shareURL: shareURL,
+                $distractionFree: $distractionFree,
+                $paperTemplate: $paperTemplate,
+                $inkColor: $inkColor,
+                $penWidth: $penWidth,
+                $showingCollaborationSettings: $showingCollaborationSettings,
+                $showingManualCard: $showingManualCard,
+                $showingReview: $showingReview,
+                $showingDrawing: $showingDrawing,
+                $showingImporter: $showingImporter,
+                onExport: { export($0) },
+                onToggleAudio: { toggleAudio() },
+                onAddAudioAnchor: { addAudioAnchor() },
+                onGenerateCards: { generateCards() },
+                onCreateReadOnlyLink: { createReadOnlyLink() },
+                onFlush: { flush() },
+                onCopyMarkdown: { copyMarkdown() },
+                onToggleFocus: { withAnimation(.snappy) { distractionFree.toggle() } }
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var editorContent: some View {
+        // An explicit conditional rather than a `Group` wrapping both
+        // branches: the two layouts are large enough that the ViewBuilder
+        // exceeded the type-checker's budget and failed the build.
+        if distractionFree {
+            focusLayout
+        } else {
+            standardLayout
+        }
     }
 
     // MARK: - Standard layout
