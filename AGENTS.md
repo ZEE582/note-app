@@ -17,15 +17,16 @@ entire project. Nothing else in the repo is live code.
   generated with `xcodegen generate`. The `.xcodeproj` is gitignored on purpose
   so it cannot drift from the YAML. See `DEPLOYMENT.md`.
 - **The app target compiles `Sources/MyNotesSwiftUI` directly.** It does not
-  link `Package.swift` as a dependency, because that package exports an
-  executable product and an executable cannot be linked into an app target.
-  There is therefore exactly one `@main`, in `MyNotesApp.swift`, and it must
-  stay that way.
-- **`Info.plist` is hand-maintained and committed** with
-  `GENERATE_INFOPLIST_FILE: NO`. Adding an API that needs a usage description
-  means adding the key there in the same change. `AVAudioRecorder` is why
-  `NSMicrophoneUsageDescription` is present; without it the app terminates on
-  first mic access.
+  link `Package.swift` as a dependency. `Package.swift` now exports a library
+  product purely so `swift build` can type-check the sources with the real SDKs
+  before you open Xcode; an executable product there would invite linking it
+  and colliding on `@main`, which lives only in `MyNotesApp.swift`.
+- **Never add XcodeGen `info:` or `entitlements:` blocks with `properties`.**
+  Those blocks *generate* the file and would overwrite the committed
+  `Info.plist` and `MyNotes.entitlements`, silently dropping
+  `NSMicrophoneUsageDescription` — which terminates the app on first mic
+  access. Both are attached through the `INFOPLIST_FILE` and
+  `CODE_SIGN_ENTITLEMENTS` build settings instead.
 - **CloudKit schema rule.** Every stored property on `NoteRecord` must be
   optional or carry a default value, including any property added later.
   SwiftData's CloudKit backing rejects the schema at runtime otherwise, and it
@@ -54,9 +55,13 @@ a Mac. What *is* possible:
 ```sh
 # syntax check every file
 swiftc -parse -swift-version 5 Sources/MyNotesSwiftUI/<File>.swift
+
+# full type check against the real SDKs (macOS only)
+swift build --package-path MyNotesSwiftUI
 ```
 
-For behaviour changes, build the host-compilable logic layer and run assertions
-against it. Everything touching SwiftData, CloudKit, PencilKit, Vision, AVFoundation,
-or SwiftUI layout can only be validated on a simulator or device — say so rather
-than claiming it works.
+`swift build` type-checks but cannot run. Running anything requires a
+simulator or device. For behaviour changes, build the host-compilable logic
+layer and run assertions against it. Everything touching SwiftData, CloudKit,
+PencilKit, Vision, AVFoundation, or SwiftUI layout can only be validated on a
+simulator or device — say so rather than claiming it works.

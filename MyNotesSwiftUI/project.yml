@@ -38,29 +38,27 @@ targets:
         excludes:
           - "**/.DS_Store"
 
-    info:
-      path: Info.plist
-      # Info.plist is committed and hand-maintained; Xcode must not rewrite it.
-      properties: {}
-
+    # Info.plist and MyNotes.entitlements are hand-maintained and committed.
+    # They are attached through build settings rather than XcodeGen's `info` /
+    # `entitlements` blocks, because those blocks *generate* the file from
+    # `properties` and would overwrite the committed plist — dropping
+    # NSMicrophoneUsageDescription, which terminates the app on first mic
+    # access.
     settings:
       base:
         PRODUCT_NAME: MyNotes
         PRODUCT_BUNDLE_IDENTIFIER: com.mynotes.app
+        INFOPLIST_FILE: Info.plist
+        GENERATE_INFOPLIST_FILE: NO
         CODE_SIGN_ENTITLEMENTS: MyNotes.entitlements
         # UI is laid out for iPad; iPhone is not a shipping target.
         TARGETED_DEVICE_FAMILY: "2"
-        GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
         CODE_SIGN_STYLE: Automatic
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         ENABLE_PREVIEWS: YES
         SWIFT_STRICT_CONCURRENCY: minimal
-
-    entitlements:
-      path: MyNotes.entitlements
-      properties: {}
 
 schemes:
   MyNotes:

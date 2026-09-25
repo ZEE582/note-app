@@ -84,13 +84,30 @@ final class NotesStore: ObservableObject {
             syncStatus = .cloud
         } else {
             let localConfiguration = ModelConfiguration("MyNotesLocal", schema: schema, isStoredInMemoryOnly: false)
-            guard let localContainer = try? ModelContainer(for: schema, configurations: [localConfiguration]) else {
-                fatalError("Unable to initialize local SwiftData storage.")
+            if let localContainer = try? ModelContainer(for: schema, configurations: [localConfiguration]) {
+                modelContainer = localContainer
+                modelContext = localContainer.mainContext
+                syncStatus = .local
+                storageError = "تعذر تفعيل iCloud حاليًا؛ تم تشغيل التخزين المحلي بأمان."
+            } else {
+                // Even the on-disk local store can fail, typically when the
+                // container is corrupt or the device is out of space. An
+                // in-memory store gives the user a working session with the
+                // note they are editing, which is far better than terminating
+                // at launch. Nothing is persisted, so the user is told.
+                let memoryConfiguration = ModelConfiguration(
+                    "MyNotesEphemeral",
+                    schema: schema,
+                    isStoredInMemoryOnly: true
+                )
+                guard let memoryContainer = try? ModelContainer(for: schema, configurations: [memoryConfiguration]) else {
+                    fatalError("Unable to initialize any SwiftData storage.")
+                }
+                modelContainer = memoryContainer
+                modelContext = memoryContainer.mainContext
+                syncStatus = .local
+                storageError = "تعذر فتح التخزين على الجهاز؛ ملاحظاتك مؤقتة ولن تُحفظ بعد إغلاق التطبيق."
             }
-            modelContainer = localContainer
-            modelContext = localContainer.mainContext
-            syncStatus = .local
-            storageError = "تعذر تفعيل iCloud حاليًا؛ تم تشغيل التخزين المحلي بأمان."
         }
         importLegacyJSONIfNeeded()
         startConnectivityMonitoring()

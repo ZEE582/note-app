@@ -17,6 +17,7 @@ The package targets iOS only. There is no macOS build.
 ```
 MyNotesSwiftUI/
   project.yml                XcodeGen manifest — source of truth for the app target
+  Package.swift              Host-side type check only; not the shipping build
   Info.plist                 Usage descriptions, orientations, iPad keys
   Assets.xcassets            AppIcon, AccentColor
   MyNotes.entitlements       iCloud container + CloudKit capability
@@ -58,6 +59,17 @@ account.
 ## Testing
 
 The pure-logic layers (flashcard scheduling, template generation, Markdown and
+HTML export) are framework-independent and can be exercised on a plain host.
+The UI, SwiftData, CloudKit, PencilKit, and Vision layers cannot — they need a
+simulator or device.
+
+`swift build` type-checks every source against the real SDKs, which is the
+cheapest way to catch a type error before opening Xcode. It does not run
+anything.
+
+## Testing
+
+The pure-logic layers (flashcard scheduling, template generation, Markdown and
 HTML export) are framework-independent and can be exercised on a host without
 an Apple SDK. The UI, SwiftData, CloudKit, PencilKit, and Vision layers cannot —
 they need a simulator or device.
@@ -65,4 +77,5 @@ they need a simulator or device.
 ## CloudKit
 
 See `CLOUDKIT_SETUP.md`. The app degrades to a local-only container when the
-iCloud entitlement is missing, so it runs unsigned during development.
+iCloud entitlement is missing, and to an in-memory store if even the local
+container cannot be opened, so it always launches.
