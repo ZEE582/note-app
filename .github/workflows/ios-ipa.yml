@@ -55,7 +55,20 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             DEVELOPMENT_TEAM="" \
             ENABLE_BITCODE=NO \
-            build
+            build 2>&1 | tee ../build.log
+
+      # The job log is unreadable from outside without actions:read on the
+      # token, so the raw compiler output is published as an artifact too.
+      # Uploaded whether or not the build passed, because a passing build makes
+      # it redundant rather than wrong.
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Package as .ipa
         working-directory: MyNotesSwiftUI
