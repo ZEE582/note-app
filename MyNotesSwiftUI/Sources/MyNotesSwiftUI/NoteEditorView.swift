@@ -107,7 +107,14 @@ struct NoteEditorView: View {
             editorContent
         }
         .navigationTitle(distractionFree ? "" : "تحرير الملاحظة")
-        .toolbar {
+        .toolbar { editorToolbar }
+    }
+
+    /// Built as its own value rather than inline in the toolbar closure.
+    /// `.toolbar` has several overloads and the builder could not pick one
+    /// for a twenty-two argument call; a single expression of a known type
+    /// gives it nothing to choose between.
+    private var editorToolbar: NoteEditorToolbar {
             NoteEditorToolbar(
                 store: store,
                 note: note,
@@ -132,7 +139,6 @@ struct NoteEditorView: View {
                 onCopyMarkdown: { copyMarkdown() },
                 onToggleFocus: { withAnimation(.snappy) { distractionFree.toggle() } }
             )
-        }
     }
 
     @ViewBuilder
