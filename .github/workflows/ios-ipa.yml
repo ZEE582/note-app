@@ -58,20 +58,21 @@ jobs:
             build 2>&1 | tee ../build.log
 
       # The job log and the artifact both need actions:read to read back, and
-      # a plain read token does not have it. The job summary comes back through
-      # the checks API instead, so that is where the diagnostics go.
-      - name: Publish build log
+      # the token used to inspect runs does not have it. Workflow error
+      # commands are the channel that does come back: each one becomes a
+      # check-run annotation, which the checks API serves.
+      - name: Publish build diagnostics
         if: always()
         working-directory: MyNotesSwiftUI
         run: |
-          {
-            echo "### Build result: ${{ job.status }}"
-            echo
-            echo '```'
-            grep -E 'error:|warning: .*(deprecated|unused)|note:' ../build.log 2>/dev/null \
-              | sort -u | head -60 || echo "no compiler diagnostics captured"
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+          grep -E '(error|warning):' ../build.log 2>/dev/null \
+            | sort -u | head -40 \
+            | while IFS= read -r line; do
+                echo "::error title=compiler::$(printf '%s' "$line" | tr -d '\r')"
+              done
+          if ! grep -qE '(error|warning):' ../build.log 2>/dev/null; then
+            echo "::error title=build::No compiler diagnostics in build.log; see the job log"
+          fi
 
       - name: Upload build log
         if: always()
