@@ -47,132 +47,85 @@ struct NoteEditorView: View {
             } else {
                 standardLayout
             }
-            .navigationTitle(distractionFree ? "" : "تحرير الملاحظة")
-            .toolbar {
-                NoteEditorToolbar(
-                    store: store,
-                    note: note,
-                    audio: audio,
-                    isDirty: isDirty,
-                    shareURL: shareURL,
-                    $distractionFree: $distractionFree,
-                    $paperTemplate: $paperTemplate,
-                    $inkColor: $inkColor,
-                    $penWidth: $penWidth,
-                    $showingCollaborationSettings: $showingCollaborationSettings,
-                    $showingManualCard: $showingManualCard,
-                    $showingReview: $showingReview,
-                    $showingDrawing: $showingDrawing,
-                    $showingImporter: $showingImporter,
-                    onExport: { export($0) },
-                    onToggleAudio: { toggleAudio() },
-                    onAddAudioAnchor: { addAudioAnchor() },
-                    onGenerateCards: { generateCards() },
-                    onCreateReadOnlyLink: { createReadOnlyLink() },
-                    onFlush: { flush() },
-                    onCopyMarkdown: { copyMarkdown() },
-                    onToggleFocus: { withAnimation(.snappy) { distractionFree.toggle() } }
-                )
-            }
-            .fileImporter(isPresented: $showingImporter, allowedContentTypes: [.pdf]) { result in
-                importPDF(result)
-            }
-            .sheet(isPresented: $showingManualCard) {
-                ManualFlashcardView { front, back in
-                    note.flashcards.append(Flashcard(front: front, back: back))
-                    markDirty()
-                }
-            }
-            .sheet(isPresented: $showingReview) {
-                FlashcardsReviewView(note: note) { updated in
-                    note = updated
-                    markDirty()
-                }
-            }
-            .sheet(isPresented: $showingDrawing) {
-                DrawingView(
-                    data: $note.drawingData,
-                    inkColor: inkColor.color,
-                    penWidth: penWidth.strokeWidth,
-                    onChange: markDirty
-                )
-            }
-            .sheet(isPresented: $showingCollaborationSettings) {
-                CollaborationSettingsView(
-                    note: note,
-                    collaboratorName: $collaboratorName,
-                    onSave: { name in
-                        store.setCollaboratorName(name)
-                        collaboratorName = name
-                    }
-                )
-            }
-            .fileExporter(
-                isPresented: $showingExporter,
-                document: exportDocument,
-                contentType: exportFormat.contentType,
-                defaultFilename: exportFilename
-            ) { result in
-                switch result {
-                case .success:
-                    errorMessage = nil
-                case .failure(let error):
-                    errorMessage = "تعذر تصدير الملف: \(error.localizedDescription)"
-                }
-            }
-            .alert("مشاركة CloudKit", isPresented: messageBinding($shareMessage)) {
-                Button("حسنًا", role: .cancel) { shareMessage = nil }
-            } message: {
-                Text(shareMessage ?? "")
-            }
-            .alert("تنبيه", isPresented: messageBinding($errorMessage)) {
-                Button("حسنًا", role: .cancel) { errorMessage = nil }
-            } message: {
-                Text(errorMessage ?? "")
-            }
-            .confirmationDialog("حذف «\(note.displayTitle)»؟", isPresented: $showingDeleteNote, titleVisibility: .visible) {
-                Button("حذف نهائي", role: .destructive) {
-                    flush()
-                    store.delete(note)
-                    dismiss()
-                }
-                Button("إلغاء", role: .cancel) {}
-            }
-            .alert("حذف المرفق؟", isPresented: Binding(
-                get: { attachmentToDelete != nil },
-                set: { if !$0 { attachmentToDelete = nil } }
-            ), presenting: attachmentToDelete) { attachment in
-                Button("حذف", role: .destructive) {
-                    note.attachments.removeAll { $0.id == attachment.id }
-                    attachmentToDelete = nil
-                    markDirty()
-                }
-                Button("إلغاء", role: .cancel) { attachmentToDelete = nil }
-            } message: { attachment in
-                Text("سيُحذف «\(attachment.name)» من الملاحظة.")
-            }
-            .onAppear {
-                if store.syncStatus == .cloud {
-                    store.startCollaborating(on: note)
-                }
-            }
-            .onDisappear {
-                flush()
-                if store.syncStatus == .cloud {
-                    store.stopCollaborating(on: note)
-                }
-                if audio.isRecording { audio.stop() }
-            }
-            // Only the human-editable fields are observed. Watching the whole
-            // `Note` would re-hash the drawing and every attachment blob on
-            // every keystroke.
-            .onChange(of: note.title) { markDirty() }
-            .onChange(of: note.content) { markDirty() }
-            .onChange(of: note.folder) { markDirty() }
-            .onChange(of: note.tags) { markDirty() }
-            .onChange(of: distractionFree) { markDirty() }
-            .task(id: note.id) { await autosaveLoop() }
         }
+        .navigationTitle(distractionFree ? "" : "تحرير الملاحظة")
+        .toolbar {
+            NoteEditorToolbar(
+                store: store,
+                note: note,
+                audio: audio,
+                isDirty: isDirty,
+                shareURL: shareURL,
+                $distractionFree: $distractionFree,
+                $paperTemplate: $paperTemplate,
+                $inkColor: $inkColor,
+                $penWidth: $penWidth,
+                $showingCollaborationSettings: $showingCollaborationSettings,
+                $showingManualCard: $showingManualCard,
+                $showingReview: $showingReview,
+                $showingDrawing: $showingDrawing,
+                $showingImporter: $showingImporter,
+                onExport: { export($0) },
+                onToggleAudio: { toggleAudio() },
+                onAddAudioAnchor: { addAudioAnchor() },
+                onGenerateCards: { generateCards() },
+                onCreateReadOnlyLink: { createReadOnlyLink() },
+                onFlush: { flush() },
+                onCopyMarkdown: { copyMarkdown() },
+                onToggleFocus: { withAnimation(.snappy) { distractionFree.toggle() } }
+            )
+        }
+        .noteEditorSheets(
+            note: $note,
+            inkColor: inkColor.color,
+            penStrokeWidth: penWidth.strokeWidth,
+            exportFilename: exportFilename,
+            showingImporter: $showingImporter,
+            showingManualCard: $showingManualCard,
+            showingReview: $showingReview,
+            showingDrawing: $showingDrawing,
+            showingCollaborationSettings: $showingCollaborationSettings,
+            showingExporter: $showingExporter,
+            exportDocument: $exportDocument,
+            exportFormat: $exportFormat,
+            collaboratorName: $collaboratorName,
+            errorMessage: $errorMessage,
+            onImportPDF: importPDF,
+            onMarkDirty: markDirty,
+            onSaveCollaborator: { name in
+                store.setCollaboratorName(name)
+                collaboratorName = name
+            },
+            onExportFinished: { error in
+                if let error {
+                    errorMessage = "تعذر تصدير الملف: \(error.localizedDescription)"
+                } else {
+                    errorMessage = nil
+                }
+            }
+        )
+        .noteEditorDialogs(
+            note: note,
+            shareMessage: $shareMessage,
+            errorMessage: $errorMessage,
+            showingDeleteNote: $showingDeleteNote,
+            attachmentToDelete: $attachmentToDelete,
+            onDeleteNote: {
+                flush()
+                store.delete(note)
+                dismiss()
+            },
+            onMarkDirty: markDirty
+        )
+        .noteEditorLifecycle(
+            note: note,
+            store: store,
+            audio: audio,
+            distractionFree: distractionFree,
+            onMarkDirty: markDirty,
+            onFlush: flush,
+            onAutosave: autosaveLoop
+        )
     }
 
     // MARK: - Standard layout
@@ -671,33 +624,6 @@ struct NoteEditorView: View {
 
     // MARK: - Writing tools
 
-    enum PaperTemplate: String, CaseIterable, Identifiable {
-        case plain, lined, grid, dark
-        var id: String { rawValue }
-        var title: String {
-            switch self { case .plain: return "فارغ"; case .lined: return "مسطر"; case .grid: return "شبكي"; case .dark: return "ليلي" }
-        }
-        var icon: String {
-            switch self { case .plain: return "doc"; case .lined: return "text.justify"; case .grid: return "grid"; case .dark: return "moon" }
-        }
-    }
-
-    enum InkColor: String, CaseIterable, Identifiable {
-        case indigo, black, blue, orange
-        var id: String { rawValue }
-        var title: String { rawValue == "indigo" ? "نيلي" : rawValue == "black" ? "أسود" : rawValue == "blue" ? "أزرق" : "برتقالي" }
-        var color: Color {
-            switch self { case .indigo: return .indigo; case .black: return .primary; case .blue: return .blue; case .orange: return .orange }
-        }
-    }
-
-    enum PenWidth: String, CaseIterable, Identifiable {
-        case fine, medium, bold
-        var id: String { rawValue }
-        var title: String { rawValue == "fine" ? "رفيع" : rawValue == "medium" ? "متوسط" : "عريض" }
-        var fontSize: CGFloat { rawValue == "fine" ? 16 : rawValue == "medium" ? 18 : 21 }
-        var strokeWidth: CGFloat { rawValue == "fine" ? 2.5 : rawValue == "medium" ? 4.5 : 8 }
-    }
 
     struct PaperBackground: View {
         let template: PaperTemplate
@@ -892,6 +818,273 @@ struct CollaborationSettingsView: View {
 /// solve, and a some ToolbarContent property was ambiguous against the
 /// other .toolbar overloads. A concrete struct sidesteps both problems:
 /// the builder sees a plain type, and it is type-checked on its own.
+/// The editor's presentation modifiers are split across three
+/// `ViewModifier`s rather than chained in `body`.
+///
+/// They used to be one expression of roughly 130 statements: four sheets, a
+/// file importer, a file exporter, four dialogs and the lifecycle hooks. The
+/// type-checker walks such an expression as a single unit and ran out of budget
+/// on it, reporting only `var body: some View`. Each group below is small
+/// enough to check on its own, and a failure now names the group that caused
+/// it instead of `body`.
+private struct NoteEditorSheetsModifier: ViewModifier {
+    @Binding var note: Note
+    let inkColor: Color
+    let penStrokeWidth: CGFloat
+    let exportFilename: String
+    @Binding var showingImporter: Bool
+    @Binding var showingManualCard: Bool
+    @Binding var showingReview: Bool
+    @Binding var showingDrawing: Bool
+    @Binding var showingCollaborationSettings: Bool
+    @Binding var showingExporter: Bool
+    @Binding var exportDocument: NoteExportDocument?
+    @Binding var exportFormat: NoteExportFormat
+    @Binding var collaboratorName: String
+    @Binding var errorMessage: String?
+    let onImportPDF: (Result<URL, Error>) -> Void
+    let onMarkDirty: () -> Void
+    let onSaveCollaborator: (String) -> Void
+    let onExportFinished: (Error?) -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .fileImporter(isPresented: $showingImporter, allowedContentTypes: [.pdf],
+                          onCompletion: onImportPDF)
+            .sheet(isPresented: $showingManualCard) {
+                ManualFlashcardView { front, back in
+                    note.flashcards.append(Flashcard(front: front, back: back))
+                    onMarkDirty()
+                }
+            }
+            .sheet(isPresented: $showingReview) {
+                FlashcardsReviewView(note: note) { updated in
+                    note = updated
+                    onMarkDirty()
+                }
+            }
+            .sheet(isPresented: $showingDrawing) {
+                DrawingView(
+                    data: $note.drawingData,
+                    inkColor: inkColor,
+                    penWidth: penStrokeWidth,
+                    onChange: onMarkDirty
+                )
+            }
+            .sheet(isPresented: $showingCollaborationSettings) {
+                CollaborationSettingsView(
+                    note: note,
+                    collaboratorName: $collaboratorName,
+                    onSave: onSaveCollaborator
+                )
+            }
+            .fileExporter(
+                isPresented: $showingExporter,
+                document: exportDocument,
+                contentType: exportFormat.contentType,
+                defaultFilename: exportFilename
+            ) { result in
+                if case .failure(let error) = result {
+                    onExportFinished(error)
+                } else {
+                    onExportFinished(nil)
+                }
+            }
+    }
+}
+
+private struct NoteEditorDialogsModifier: ViewModifier {
+    let note: Note
+    @Binding var shareMessage: String?
+    @Binding var errorMessage: String?
+    @Binding var showingDeleteNote: Bool
+    @Binding var attachmentToDelete: NoteAttachment?
+    let onDeleteNote: () -> Void
+    let onMarkDirty: () -> Void
+
+    /// Mirrors the editor's `messageBinding`: a message is presented exactly
+    /// while it is non-nil, and dismissing it clears it.
+    private var shareMessagePresented: Binding<Bool> {
+        Binding(get: { shareMessage != nil }, set: { if !$0 { shareMessage = nil } })
+    }
+
+    private var errorMessagePresented: Binding<Bool> {
+        Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .alert("مشاركة CloudKit", isPresented: shareMessagePresented) {
+                Button("حسنًا", role: .cancel) { shareMessage = nil }
+            } message: {
+                Text(shareMessage ?? "")
+            }
+            .alert("تنبيه", isPresented: errorMessagePresented) {
+                Button("حسنًا", role: .cancel) { errorMessage = nil }
+            } message: {
+                Text(errorMessage ?? "")
+            }
+            .confirmationDialog("حذف «\(note.displayTitle)»؟",
+                                isPresented: $showingDeleteNote,
+                                titleVisibility: .visible) {
+                Button("حذف نهائي", role: .destructive, action: onDeleteNote)
+                Button("إلغاء", role: .cancel) {}
+            }
+            .alert("حذف المرفق؟", isPresented: attachmentDeletePresented,
+                   presenting: attachmentToDelete) { attachment in
+                Button("حذف", role: .destructive) {
+                    note.attachments.removeAll { $0.id == attachment.id }
+                    attachmentToDelete = nil
+                    onMarkDirty()
+                }
+                Button("إلغاء", role: .cancel) { attachmentToDelete = nil }
+            } message: { attachment in
+                Text("سيُحذف «\(attachment.name)» من الملاحظة.")
+            }
+    }
+
+    private var attachmentDeletePresented: Binding<Bool> {
+        Binding(get: { attachmentToDelete != nil },
+                set: { if !$0 { attachmentToDelete = nil } })
+    }
+}
+
+private struct NoteEditorLifecycleModifier: ViewModifier {
+    let note: Note
+    let store: NotesStore
+    let audio: AudioRecorder
+    let distractionFree: Bool
+    let onMarkDirty: () -> Void
+    let onFlush: () -> Void
+    let onAutosave: () async -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .onAppear {
+                if store.syncStatus == .cloud {
+                    store.startCollaborating(on: note)
+                }
+            }
+            .onDisappear {
+                onFlush()
+                if store.syncStatus == .cloud {
+                    store.stopCollaborating(on: note)
+                }
+                if audio.isRecording { audio.stop() }
+            }
+            // Only the human-editable fields are observed. Watching the whole
+            // `Note` would re-hash the drawing and every attachment blob on
+            // every keystroke.
+            .onChange(of: note.title) { onMarkDirty() }
+            .onChange(of: note.content) { onMarkDirty() }
+            .onChange(of: note.folder) { onMarkDirty() }
+            .onChange(of: note.tags) { onMarkDirty() }
+            .onChange(of: distractionFree) { onMarkDirty() }
+            .task(id: note.id) { await onAutosave() }
+    }
+}
+
+private extension View {
+    func noteEditorSheets(
+        note: Binding<Note>,
+        inkColor: Color,
+        penStrokeWidth: CGFloat,
+        exportFilename: String,
+        showingImporter: Binding<Bool>,
+        showingManualCard: Binding<Bool>,
+        showingReview: Binding<Bool>,
+        showingDrawing: Binding<Bool>,
+        showingCollaborationSettings: Binding<Bool>,
+        showingExporter: Binding<Bool>,
+        exportDocument: Binding<NoteExportDocument?>,
+        exportFormat: Binding<NoteExportFormat>,
+        collaboratorName: Binding<String>,
+        errorMessage: Binding<String?>,
+        onImportPDF: @escaping (Result<URL, Error>) -> Void,
+        onMarkDirty: @escaping () -> Void,
+        onSaveCollaborator: @escaping (String) -> Void,
+        onExportFinished: @escaping (Error?) -> Void
+    ) -> some View {
+        modifier(NoteEditorSheetsModifier(
+            note: note, inkColor: inkColor, penStrokeWidth: penStrokeWidth,
+            exportFilename: exportFilename,
+            showingImporter: showingImporter,
+            showingManualCard: showingManualCard,
+            showingReview: showingReview,
+            showingDrawing: showingDrawing,
+            showingCollaborationSettings: showingCollaborationSettings,
+            showingExporter: showingExporter,
+            exportDocument: exportDocument,
+            exportFormat: exportFormat,
+            collaboratorName: collaboratorName,
+            errorMessage: errorMessage,
+            onImportPDF: onImportPDF,
+            onMarkDirty: onMarkDirty,
+            onSaveCollaborator: onSaveCollaborator,
+            onExportFinished: onExportFinished))
+    }
+
+    func noteEditorDialogs(
+        note: Note,
+        shareMessage: Binding<String?>,
+        errorMessage: Binding<String?>,
+        showingDeleteNote: Binding<Bool>,
+        attachmentToDelete: Binding<NoteAttachment?>,
+        onDeleteNote: @escaping () -> Void,
+        onMarkDirty: @escaping () -> Void
+    ) -> some View {
+        modifier(NoteEditorDialogsModifier(
+            note: note, shareMessage: shareMessage, errorMessage: errorMessage,
+            showingDeleteNote: showingDeleteNote,
+            attachmentToDelete: attachmentToDelete,
+            onDeleteNote: onDeleteNote, onMarkDirty: onMarkDirty))
+    }
+
+    func noteEditorLifecycle(
+        note: Note,
+        store: NotesStore,
+        audio: AudioRecorder,
+        distractionFree: Bool,
+        onMarkDirty: @escaping () -> Void,
+        onFlush: @escaping () -> Void,
+        onAutosave: @escaping () async -> Void
+    ) -> some View {
+        modifier(NoteEditorLifecycleModifier(
+            note: note, store: store, audio: audio,
+            distractionFree: distractionFree,
+            onMarkDirty: onMarkDirty, onFlush: onFlush, onAutosave: onAutosave))
+    }
+}
+
+// MARK: - Writing tools
+enum PaperTemplate: String, CaseIterable, Identifiable {
+    case plain, lined, grid, dark
+    var id: String { rawValue }
+    var title: String {
+        switch self { case .plain: return "فارغ"; case .lined: return "مسطر"; case .grid: return "شبكي"; case .dark: return "ليلي" }
+    }
+    var icon: String {
+        switch self { case .plain: return "doc"; case .lined: return "text.justify"; case .grid: return "grid"; case .dark: return "moon" }
+    }
+}
+
+enum InkColor: String, CaseIterable, Identifiable {
+    case indigo, black, blue, orange
+    var id: String { rawValue }
+    var title: String { rawValue == "indigo" ? "نيلي" : rawValue == "black" ? "أسود" : rawValue == "blue" ? "أزرق" : "برتقالي" }
+    var color: Color {
+        switch self { case .indigo: return .indigo; case .black: return .primary; case .blue: return .blue; case .orange: return .orange }
+    }
+}
+
+enum PenWidth: String, CaseIterable, Identifiable {
+    case fine, medium, bold
+    var id: String { rawValue }
+    var title: String { rawValue == "fine" ? "رفيع" : rawValue == "medium" ? "متوسط" : "عريض" }
+    var fontSize: CGFloat { rawValue == "fine" ? 16 : rawValue == "medium" ? 18 : 21 }
+    var strokeWidth: CGFloat { rawValue == "fine" ? 2.5 : rawValue == "medium" ? 4.5 : 8 }
+}
+
 private struct NoteEditorToolbar: ToolbarContent {
     let store: NotesStore
     let note: Note
