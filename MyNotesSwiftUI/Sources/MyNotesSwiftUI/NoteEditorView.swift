@@ -69,9 +69,11 @@ struct NoteEditorView: View {
             }
         )
         .noteEditorDialogs(
-            note: note,
             shareMessage: $shareMessage,
-            errorMessage: $errorMessage,
+            errorMessage: $errorMessage
+        )
+        .noteEditorDelete(
+            note: note,
             showingDeleteNote: $showingDeleteNote,
             attachmentToDelete: $attachmentToDelete,
             onDeleteNote: {
@@ -420,13 +422,6 @@ struct NoteEditorView: View {
     private var exportFilename: String {
         let base = note.displayTitle.replacingOccurrences(of: "/", with: "-")
         return "\(base).\(exportFormat.fileExtension)"
-    }
-
-    private func messageBinding(_ text: Binding<String?>) -> Binding<Bool> {
-        Binding(
-            get: { text.wrappedValue != nil },
-            set: { if !$0 { text.wrappedValue = nil } }
-        )
     }
 
     // MARK: - Saving
@@ -907,13 +902,8 @@ private struct NoteEditorSheetsModifier: ViewModifier {
 }
 
 private struct NoteEditorDialogsModifier: ViewModifier {
-    let note: Note
     @Binding var shareMessage: String?
     @Binding var errorMessage: String?
-    @Binding var showingDeleteNote: Bool
-    @Binding var attachmentToDelete: NoteAttachment?
-    let onDeleteNote: () -> Void
-    let onMarkDirty: () -> Void
 
     /// Mirrors the editor's `messageBinding`: a message is presented exactly
     /// while it is non-nil, and dismissing it clears it.
@@ -937,6 +927,26 @@ private struct NoteEditorDialogsModifier: ViewModifier {
             } message: {
                 Text(errorMessage ?? "")
             }
+    }
+}
+
+/// The delete confirmations are separate from the alerts for the same
+/// reason: four chained dialogs in one modifier was more than the
+/// type-checker would resolve in its budget.
+private struct NoteEditorDeleteModifier: ViewModifier {
+    let note: Note
+    @Binding var showingDeleteNote: Bool
+    @Binding var attachmentToDelete: NoteAttachment?
+    let onDeleteNote: () -> Void
+    let onMarkDirty: () -> Void
+
+    private var attachmentDeletePresented: Binding<Bool> {
+        Binding(get: { attachmentToDelete != nil },
+                set: { if !$0 { attachmentToDelete = nil } })
+    }
+
+    func body(content: Content) -> some View {
+        content
             .confirmationDialog("حذف «\(note.displayTitle)»؟",
                                 isPresented: $showingDeleteNote,
                                 titleVisibility: .visible) {
@@ -954,11 +964,6 @@ private struct NoteEditorDialogsModifier: ViewModifier {
             } message: { attachment in
                 Text("سيُحذف «\(attachment.name)» من الملاحظة.")
             }
-    }
-
-    private var attachmentDeletePresented: Binding<Bool> {
-        Binding(get: { attachmentToDelete != nil },
-                set: { if !$0 { attachmentToDelete = nil } })
     }
 }
 
@@ -1038,17 +1043,22 @@ private extension View {
     }
 
     func noteEditorDialogs(
-        note: Note,
         shareMessage: Binding<String?>,
-        errorMessage: Binding<String?>,
+        errorMessage: Binding<String?>
+    ) -> some View {
+        modifier(NoteEditorDialogsModifier(
+            shareMessage: shareMessage, errorMessage: errorMessage))
+    }
+
+    func noteEditorDelete(
+        note: Note,
         showingDeleteNote: Binding<Bool>,
         attachmentToDelete: Binding<NoteAttachment?>,
         onDeleteNote: @escaping () -> Void,
         onMarkDirty: @escaping () -> Void
     ) -> some View {
-        modifier(NoteEditorDialogsModifier(
-            note: note, shareMessage: shareMessage, errorMessage: errorMessage,
-            showingDeleteNote: showingDeleteNote,
+        modifier(NoteEditorDeleteModifier(
+            note: note, showingDeleteNote: showingDeleteNote,
             attachmentToDelete: attachmentToDelete,
             onDeleteNote: onDeleteNote, onMarkDirty: onMarkDirty))
     }
@@ -1151,17 +1161,17 @@ private struct NoteEditorToolbar: ToolbarContent {
         ToolbarItemGroup(placement: .primaryAction) {
             if !distractionFree {
                 Menu {
-                    Picker("قالب الورق", selection: paperTemplate) {
+                    Picker("قالب الورق", selection: $paperTemplate) {
                         ForEach(PaperTemplate.allCases) { template in
                             Label(template.title, systemImage: template.icon).tag(template)
                         }
                     }
-                    Picker("سُمك القلم", selection: penWidth) {
+                    Picker("سُمك القلم", selection: $penWidth) {
                         ForEach(PenWidth.allCases) { width in
                             Text(width.title).tag(width)
                         }
                     }
-                    Picker("لون الحبر", selection: inkColor) {
+                    Picker("لون الحبر", selection: $inkColor) {
                         ForEach(InkColor.allCases) { color in
                             Text(color.title).tag(color)
                         }
