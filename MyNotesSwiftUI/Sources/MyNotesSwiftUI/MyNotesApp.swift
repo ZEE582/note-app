@@ -28,35 +28,5 @@ struct MyNotesApp: App {
                 }
                 #endif
         }
-        #if os(macOS)
-        .commands {
-            CommandGroup(replacing: .newItem) {
-                Button("ملاحظة جديدة") { store.createNote() }
-                    .keyboardShortcut("n", modifiers: [.command])
-            }
-            CommandGroup(after: .toolbar) {
-                Button("Quick Note") { store.createNote(folder: "ملاحظات سريعة") }
-                    .keyboardShortcut("n", modifiers: [.command, .shift])
-                Divider()
-                Button("تصدير Note Markdown المحدد") { exportSelectedAsMarkdown() }
-                    .keyboardShortcut("e", modifiers: [.command, .shift])
-                    .disabled(store.selectedNote == nil)
-            }
-        }
-        #endif
     }
-
-    #if os(macOS)
-    private func exportSelectedAsMarkdown() {
-        guard let note = store.selectedNote else { return }
-        let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("\(note.displayTitle).md")
-        do {
-            try Data(NoteExporter.markdown(for: note).utf8).write(to: url, options: .atomic)
-            store.showBanner(.success, "تم حفظ «\(url.lastPathComponent)» في مجلد المستندات")
-        } catch {
-            store.showBanner(.failure, "تعذر حفظ الملف: \(error.localizedDescription)")
-        }
-    }
-    #endif
 }

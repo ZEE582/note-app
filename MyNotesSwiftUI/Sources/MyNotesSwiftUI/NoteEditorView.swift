@@ -2,11 +2,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 import Foundation
 
-#if os(iOS)
 import UIKit
-#elseif os(macOS)
-import AppKit
-#endif
 
 struct NoteEditorView: View {
     @EnvironmentObject private var store: NotesStore

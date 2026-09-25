@@ -6,11 +6,7 @@ import UniformTypeIdentifiers
 import CoreText
 #endif
 
-#if os(iOS)
 import UIKit
-#elseif os(macOS)
-import AppKit
-#endif
 
 enum NoteExportFormat: String, CaseIterable, Identifiable {
     case markdown
@@ -321,7 +317,6 @@ enum NoteExporter {
         let body = pdfBody(for: note)
         let ranges = pageRanges(for: body, in: contentRect)
 
-        #if os(iOS)
         let renderer = UIGraphicsPDFRenderer(bounds: CGRect(origin: .zero, size: pageSize))
         return renderer.pdfData { context in
             for range in ranges {
@@ -329,22 +324,6 @@ enum NoteExporter {
                 draw(range: range, of: body, in: contentRect, context: context.cgContext)
             }
         }
-        #elseif os(macOS)
-        let data = NSMutableData()
-        guard let consumer = CGDataConsumer(data: data) else { return Data() }
-        var mediaBox = CGRect(origin: .zero, size: pageSize)
-        guard let context = CGContext(consumer: consumer, mediaBox: &mediaBox, nil) else { return Data() }
-
-        for range in ranges {
-            context.beginPDFPage(nil)
-            draw(range: range, of: body, in: contentRect, context: context)
-        }
-        context.endPDFPage()
-        context.closePDF()
-        return data as Data
-        #else
-        return Data()
-        #endif
     }
 
     /// Splits the attributed string into the character ranges that fit one

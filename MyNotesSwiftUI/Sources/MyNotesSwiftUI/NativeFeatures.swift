@@ -2,7 +2,6 @@ import Foundation
 import AVFoundation
 import SwiftUI
 
-#if os(iOS)
 import PencilKit
 import UIKit
 
@@ -151,36 +150,3 @@ struct PencilCanvas: UIViewRepresentable {
         }
     }
 }
-
-#else
-
-// MARK: - Non-Apple platforms
-
-@MainActor
-final class AudioRecorder: ObservableObject {
-    @Published private(set) var isRecording = false
-    @Published private(set) var duration: TimeInterval = 0
-    @Published private(set) var permissionDenied = true
-    private(set) var fileName: String?
-    func start() {}
-    func stop() {}
-}
-
-struct DrawingView: View {
-    @Environment(\.dismiss) private var dismiss
-    @Binding var data: Data?
-    var inkColor: Color = .indigo
-    var penWidth: CGFloat = 4
-    var onChange: () -> Void = { }
-
-    var body: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "pencil.tip").font(.largeTitle)
-            Text("الرسم بالقلم متاح على iPad وiPhone")
-            Button("إغلاق") { dismiss() }
-        }
-        .padding()
-    }
-}
-
-#endif

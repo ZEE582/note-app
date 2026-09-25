@@ -33,3 +33,4 @@ DerivedData/
 *.log
 *.tmp
 *.tsbuildinfo
+node_modules

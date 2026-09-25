@@ -3,11 +3,9 @@ import Foundation
 #if canImport(CoreSpotlight)
 import CoreSpotlight
 import UniformTypeIdentifiers
-#if os(iOS)
 import PencilKit
 import UIKit
 import Vision
-#endif
 
 enum SpotlightIndexer {
     private static let index = CSSearchableIndex.default()
@@ -15,9 +13,7 @@ enum SpotlightIndexer {
 
     static func index(_ note: Note) {
         index(note, handwriting: nil)
-#if os(iOS)
         recognizeHandwriting(in: note)
-#endif
     }
 
     private static func index(_ note: Note, handwriting: String?) {
@@ -37,7 +33,6 @@ enum SpotlightIndexer {
         index.indexSearchableItems([item])
     }
 
-#if os(iOS)
     private static func recognizeHandwriting(in note: Note) {
         guard let data = note.drawingData,
               let drawing = try? PKDrawing(data: data),
@@ -62,7 +57,6 @@ enum SpotlightIndexer {
             try? VNImageRequestHandler(cgImage: image, options: [:]).perform([request])
         }
     }
-#endif
 
     static func remove(noteID: UUID) {
         index.deleteSearchableItems(withIdentifiers: [noteID.uuidString])

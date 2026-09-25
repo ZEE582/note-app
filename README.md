@@ -1,56 +1,61 @@
-# Welcome to your Expo app 👋
+# MyNotes — iPad notes app
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A native SwiftUI + SwiftData notes app for iPad. Arabic-first (RTL), with
+CloudKit sync, PencilKit drawing, audio attachments, flashcards, and a study
+template catalogue.
 
-## Get started
+## Requirements
 
-1. Install dependencies
+- Xcode 15 or newer
+- iOS / iPadOS 17.0 or newer
+- An Apple Developer account for CloudKit and Spotlight
 
-   ```bash
-   npm install
-   ```
+The package targets iOS only. There is no macOS build.
 
-2. Start the app
+## Layout
 
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```
+MyNotesSwiftUI/
+  Package.swift              Swift package manifest (iOS 17+)
+  MyNotes.entitlements       iCloud container + CloudKit capability
+  CLOUDKIT_SETUP.md          container and schema setup steps
+  Sources/MyNotesSwiftUI/
+    MyNotesApp.swift         App entry point, Spotlight deep links
+    NotesStore.swift         SwiftData stack, CloudKit fallback, autosave
+    Models.swift             Note, folder, attachment, bookmark models
+    NotesLibraryView.swift   Library + detail columns
+    NoteEditorView.swift     Editor, attachments, collaboration settings
+    NoteExporting.swift      Markdown, HTML, PDF generation
+    StudyTemplates.swift     Template catalogue and TemplateStore
+    TemplateStoreView.swift  Template browsing and downloads
+    FlashcardLogic.swift     Spaced-repetition scheduling
+    FlashcardsReviewView.swift Review session UI
+    CloudKitCollaboration.swift  Shared-zone collaboration
+    NativeFeatures.swift     AVFoundation recording, PencilKit canvas
+    SpotlightIndexer.swift   CoreSpotlight + Vision handwriting search
+    DesignSystem.swift       Shared palette, typography, formatters
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Build
 
-### Other setup steps
+Open `MyNotesSwiftUI` as a Swift package in Xcode, or:
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+```sh
+swift build -Xswiftc "-sdk" -Xswiftc "$(xcrun --show-sdk-path --sdk iphoneos)"
+```
 
-## Learn more
+An `.xcodeproj` is not checked in. Create one in Xcode if you need a runnable
+app target with the entitlements attached — the package alone does not carry
+`MyNotes.entitlements`.
 
-To learn more about developing your project with Expo, look at the following resources:
+## Testing
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+The pure-logic layers (flashcard scheduling, template generation, Markdown and
+HTML export) are framework-independent and can be exercised on a host without
+an Apple SDK. The UI, SwiftData, CloudKit, PencilKit, and Vision layers cannot —
+they need a simulator or device.
 
-## Join the community
+## CloudKit
 
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+See `CLOUDKIT_SETUP.md`. The app degrades to a local-only container when the
+iCloud entitlement is missing, so it runs unsigned during development.
