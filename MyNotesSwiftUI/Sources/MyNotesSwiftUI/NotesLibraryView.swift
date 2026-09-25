@@ -108,7 +108,14 @@ struct NotesLibraryView: View {
     // MARK: - Sidebar
 
     private var sidebar: some View {
-        List(selection: $filter) {
+        // `List(selection:)` is only available on iOS with an optional
+        // selection type, but `filter` is deliberately non-optional so the rest
+        // of the view never has to unwrap it. The adapter below keeps the
+        // stored state non-optional and still satisfies the initializer.
+        List(selection: Binding<LibraryFilter?>(
+            get: { filter },
+            set: { if let next = $0 { filter = next } }
+        )) {
             Section("المكتبة") {
                 sidebarRow(.all, count: store.activeNotes.count)
                 sidebarRow(.pinned, count: store.pinnedNotes.count)
@@ -146,7 +153,28 @@ struct NotesLibraryView: View {
         }
         .listStyle(.sidebar)
         .navigationTitle("MyNotes")
-        .toolbar(content: { sidebarToolbar })
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Menu {
+                    Button { store.createNote() } label: {
+                        Label("ملاحظة فارغة", systemImage: "doc")
+                    }
+                    Button { showingTemplateStore = true } label: {
+                        Label("من قالب", systemImage: "doc.text")
+                    }
+                    Button { showingQuickNote = true } label: {
+                        Label("Quick Note", systemImage: "bolt.fill")
+                    }
+                } label: {
+                    Label("ملاحظة جديدة", systemImage: "plus")
+                }
+            }
+            ToolbarItem(placement: .secondaryAction) {
+                Button { showingTemplateStore = true } label: {
+                    Label("متجر القوالب", systemImage: "square.grid.2x2")
+                }
+            }
+        }
         .safeAreaInset(edge: .bottom) { syncFooter }
     }
 
@@ -163,34 +191,6 @@ struct NotesLibraryView: View {
             Image(systemName: target.symbolName)
         }
         .tag(target)
-    }
-
-    /// Declared as the `ToolbarContent` existential rather than
-    /// `some ToolbarContent`: passing an opaque result into `.toolbar` is
-    /// ambiguous against the other toolbar overloads, because the
-    /// `@ToolbarContentBuilder` closure cannot see through the opaque type.
-    @ToolbarContentBuilder
-    private var sidebarToolbar: ToolbarContent {
-        ToolbarItem(placement: .primaryAction) {
-            Menu {
-                Button { store.createNote() } label: {
-                    Label("ملاحظة فارغة", systemImage: "doc")
-                }
-                Button { showingTemplateStore = true } label: {
-                    Label("من قالب", systemImage: "doc.text")
-                }
-                Button { showingQuickNote = true } label: {
-                    Label("Quick Note", systemImage: "bolt.fill")
-                }
-            } label: {
-                Label("ملاحظة جديدة", systemImage: "plus")
-            }
-        }
-        ToolbarItem(placement: .secondaryAction) {
-            Button { showingTemplateStore = true } label: {
-                Label("متجر القوالب", systemImage: "square.grid.2x2")
-            }
-        }
     }
 
     private var syncFooter: some View {
@@ -318,28 +318,25 @@ struct NotesLibraryView: View {
             }
         }
         .navigationTitle(filter.title)
-        .toolbar(content: { contentToolbar })
-        .animation(.snappy, value: store.banner)
-    }
-
-    @ToolbarContentBuilder
-    private var contentToolbar: ToolbarContent {
-        ToolbarItem(placement: .primaryAction) {
-            Button { showingQuickNote = true } label: {
-                Label("Quick Note", systemImage: "bolt.fill")
-            }
-        }
-        ToolbarItem(placement: .secondaryAction) {
-            Menu {
-                Picker("الترتيب", selection: $sort) {
-                    ForEach(LibrarySort.allCases) { option in
-                        Text(option.rawValue).tag(option)
-                    }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button { showingQuickNote = true } label: {
+                    Label("Quick Note", systemImage: "bolt.fill")
                 }
-            } label: {
-                Label("ترتيب", systemImage: "arrow.up.arrow.down")
+            }
+            ToolbarItem(placement: .secondaryAction) {
+                Menu {
+                    Picker("الترتيب", selection: $sort) {
+                        ForEach(LibrarySort.allCases) { option in
+                            Text(option.rawValue).tag(option)
+                        }
+                    }
+                } label: {
+                    Label("ترتيب", systemImage: "arrow.up.arrow.down")
+                }
             }
         }
+        .animation(.snappy, value: store.banner)
     }
 
     @ViewBuilder
