@@ -1163,6 +1163,8 @@ private struct NoteEditorToolbar: ToolbarContent {
             Button { showingCollaborationSettings = true } label: {
                 Label("إعدادات المشاركة", systemImage: "person.badge.plus")
             }
+        }
+
 
         ToolbarItemGroup(placement: .primaryAction) {
             if !distractionFree {
@@ -1264,6 +1266,5 @@ private struct NoteEditorToolbar: ToolbarContent {
                 .fontWeight(.semibold)
                 .disabled(!isDirty)
             }
-        }
     }
 }
