@@ -81,6 +81,10 @@ struct NoteEditorView: View {
                 store.delete(note)
                 dismiss()
             },
+            onDeleteAttachment: { attachment in
+                note.attachments.removeAll { $0.id == attachment.id }
+                markDirty()
+            },
             onMarkDirty: markDirty
         )
         .noteEditorLifecycle(
@@ -938,6 +942,7 @@ private struct NoteEditorDeleteModifier: ViewModifier {
     @Binding var showingDeleteNote: Bool
     @Binding var attachmentToDelete: NoteAttachment?
     let onDeleteNote: () -> Void
+    let onDeleteAttachment: (NoteAttachment) -> Void
     let onMarkDirty: () -> Void
 
     private var attachmentDeletePresented: Binding<Bool> {
@@ -956,9 +961,8 @@ private struct NoteEditorDeleteModifier: ViewModifier {
             .alert("حذف المرفق؟", isPresented: attachmentDeletePresented,
                    presenting: attachmentToDelete) { attachment in
                 Button("حذف", role: .destructive) {
-                    note.attachments.removeAll { $0.id == attachment.id }
+                    onDeleteAttachment(attachment)
                     attachmentToDelete = nil
-                    onMarkDirty()
                 }
                 Button("إلغاء", role: .cancel) { attachmentToDelete = nil }
             } message: { attachment in
@@ -1055,12 +1059,14 @@ private extension View {
         showingDeleteNote: Binding<Bool>,
         attachmentToDelete: Binding<NoteAttachment?>,
         onDeleteNote: @escaping () -> Void,
+        onDeleteAttachment: @escaping (NoteAttachment) -> Void,
         onMarkDirty: @escaping () -> Void
     ) -> some View {
         modifier(NoteEditorDeleteModifier(
             note: note, showingDeleteNote: showingDeleteNote,
             attachmentToDelete: attachmentToDelete,
-            onDeleteNote: onDeleteNote, onMarkDirty: onMarkDirty))
+            onDeleteNote: onDeleteNote,
+            onDeleteAttachment: onDeleteAttachment, onMarkDirty: onMarkDirty))
     }
 
     func noteEditorLifecycle(
@@ -1160,24 +1166,26 @@ private struct NoteEditorToolbar: ToolbarContent {
 
         ToolbarItemGroup(placement: .primaryAction) {
             if !distractionFree {
-                Menu {
-                    Picker("قالب الورق", selection: $paperTemplate) {
-                        ForEach(PaperTemplate.allCases) { template in
-                            Label(template.title, systemImage: template.icon).tag(template)
+                ToolbarItem {
+                    Menu {
+                        Picker("قالب الورق", selection: $paperTemplate) {
+                            ForEach(PaperTemplate.allCases) { template in
+                                Label(template.title, systemImage: template.icon).tag(template)
+                            }
                         }
-                    }
-                    Picker("سُمك القلم", selection: $penWidth) {
-                        ForEach(PenWidth.allCases) { width in
-                            Text(width.title).tag(width)
+                        Picker("سُمك القلم", selection: $penWidth) {
+                            ForEach(PenWidth.allCases) { width in
+                                Text(width.title).tag(width)
+                            }
                         }
-                    }
-                    Picker("لون الحبر", selection: $inkColor) {
-                        ForEach(InkColor.allCases) { color in
-                            Text(color.title).tag(color)
+                        Picker("لون الحبر", selection: $inkColor) {
+                            ForEach(InkColor.allCases) { color in
+                                Text(color.title).tag(color)
+                            }
                         }
+                    } label: {
+                        Label("أدوات الكتابة", systemImage: "paintbrush")
                     }
-                } label: {
-                    Label("أدوات الكتابة", systemImage: "paintbrush")
                 }
             }
 
