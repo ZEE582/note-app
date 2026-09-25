@@ -65,17 +65,17 @@ jobs:
         if: always()
         working-directory: MyNotesSwiftUI
         run: |
-          # Notes matter as much as errors here: the "ambiguous without a type
-          # annotation" and "does not conform to View" diagnostics are useless
-          # on their own, and the notes are what name the candidate types.
-          grep -E '(error|warning|note):' ../build.log 2>/dev/null \
-            | grep -vE 'Node\.js 20 is deprecated' \
+          # Anchored on the file:line:col prefix so the build log's own
+          # "note: Building targets..." chatter cannot crowd out the
+          # diagnostics. Notes are kept because the ambiguity and
+          # non-conformance errors are unreadable without them.
+          grep -E '\.swift:[0-9]+:[0-9]+: (error|note):' ../build.log 2>/dev/null \
             | head -50 \
             | while IFS= read -r line; do
                 echo "::error title=compiler::$(printf '%s' "$line" | tr -d '\r')"
               done
-          if ! grep -qE '(error|note):' ../build.log 2>/dev/null; then
-            echo "::error title=build::No compiler diagnostics in build.log; see the job log"
+          if ! grep -qE '\.swift:[0-9]+:[0-9]+: error:' ../build.log 2>/dev/null; then
+            echo "::error title=build::No compiler errors in build.log; see the job log"
           fi
 
       - name: Upload build log
