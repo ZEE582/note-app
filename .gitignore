@@ -1,43 +1,35 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
 
-# dependencies
-node_modules/
-
-# Expo
-.expo/
-dist/
-web-build/
-expo-env.d.ts
-
-# Native
-.kotlin/
-*.orig.*
-*.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
-
-# Metro
-.metro-health-check*
-
-# debug
-npm-debug.*
-yarn-debug.*
-yarn-error.*
+# Xcode
+*.xcodeproj/
+*.xcworkspace/
+!default.xcworkspace
+xcuserdata/
+DerivedData/
+*.xcuserstate
+*.xcscmblueprint
+*.moved-aside
 
 # macOS
 .DS_Store
 *.pem
 
-# local env files
+# CloudKit / signing material — never commit keys or provisioning profiles
+*.p8
+*.p12
+*.key
+*.jks
+*.mobileprovision
+*.orig.*
+
+# Local environment
+.env
 .env*.local
 
-# typescript
+# Tooling
+*.log
+*.tmp
 *.tsbuildinfo
-
-example
-
-# generated native folders
-/ios
-/android
