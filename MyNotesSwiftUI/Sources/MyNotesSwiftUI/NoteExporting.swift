@@ -31,7 +31,7 @@ enum NoteExportFormat: String, CaseIterable, Identifiable {
 
     var contentType: UTType {
         switch self {
-        case .markdown: return .markdownType
+        case .markdown: return NoteExportFormat.markdownType
         case .pdf: return UTType.pdf
         case .html: return UTType.html
         }

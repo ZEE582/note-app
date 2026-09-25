@@ -48,7 +48,6 @@ struct NoteEditorView: View {
                 standardLayout
             }
             .navigationTitle(distractionFree ? "" : "تحرير الملاحظة")
-            .navigationBarTitleDisplayMode(distractionFree ? .inline : .large)
             .toolbar {
         ToolbarItemGroup(placement: .secondaryAction) {
             if store.syncStatus == .cloud && !store.activeCollaborators.isEmpty {
@@ -75,7 +74,8 @@ struct NoteEditorView: View {
                 Label("إعدادات المشاركة", systemImage: "person.badge.plus")
             }
         }
-
+            }
+            .toolbar {
         ToolbarItemGroup(placement: .primaryAction) {
             if !distractionFree {
                 Menu {
