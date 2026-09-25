@@ -407,7 +407,7 @@ struct NoteEditorView: View {
     // MARK: - Toolbar
 
     @ToolbarContentBuilder
-    private var toolbarContent: some ToolbarContent {
+    private var toolbarContent: ToolbarContent {
         ToolbarItemGroup(placement: .secondaryAction) {
             if store.syncStatus == .cloud && !store.activeCollaborators.isEmpty {
                 Menu {

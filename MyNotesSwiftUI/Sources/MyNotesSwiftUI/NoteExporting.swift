@@ -23,17 +23,15 @@ enum NoteExportFormat: String, CaseIterable, Identifiable {
         }
     }
 
-    /// There is no `UTType.markdown`; the system ships no identifier for
-    /// Markdown, so the type is declared here rather than borrowed from a
-    /// neighbouring format. `readableContentTypes` below includes it so the
-    /// exporter can be offered for `.md` files.
-    static let markdown = UTType(exportedAs: "com.mynotes.app.markdown")
-
+    /// `UTType.markdown` must be spelled out here. A bare `.markdown` inside
+    /// this enum resolves to the `markdown` *case* of `NoteExportFormat`
+    /// rather than to the type, which is what made the earlier version of this
+    /// file fail to compile.
     var contentType: UTType {
         switch self {
-        case .markdown: return .markdown
-        case .pdf: return .pdf
-        case .html: return .html
+        case .markdown: return UTType.markdown
+        case .pdf: return UTType.pdf
+        case .html: return UTType.html
         }
     }
 
@@ -462,7 +460,7 @@ enum NoteExporter {
 // MARK: - FileDocument
 
 struct NoteExportDocument: FileDocument {
-    static var readableContentTypes: [UTType] { [.markdown, .pdf, .html] }
+    static var readableContentTypes: [UTType] { [UTType.markdown, .pdf, .html] }
 
     let data: Data
     let format: NoteExportFormat

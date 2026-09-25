@@ -165,8 +165,12 @@ struct NotesLibraryView: View {
         .tag(target)
     }
 
+    /// Declared as the `ToolbarContent` existential rather than
+    /// `some ToolbarContent`: passing an opaque result into `.toolbar` is
+    /// ambiguous against the other toolbar overloads, because the
+    /// `@ToolbarContentBuilder` closure cannot see through the opaque type.
     @ToolbarContentBuilder
-    private var sidebarToolbar: some ToolbarContent {
+    private var sidebarToolbar: ToolbarContent {
         ToolbarItem(placement: .primaryAction) {
             Menu {
                 Button { store.createNote() } label: {
@@ -319,7 +323,7 @@ struct NotesLibraryView: View {
     }
 
     @ToolbarContentBuilder
-    private var contentToolbar: some ToolbarContent {
+    private var contentToolbar: ToolbarContent {
         ToolbarItem(placement: .primaryAction) {
             Button { showingQuickNote = true } label: {
                 Label("Quick Note", systemImage: "bolt.fill")
